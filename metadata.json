@@ -1,0 +1,1 @@
+{"name":"Monte Carlo Backtest Analyzer","description":"Interactive web application that ingests trading backtest data and runs Monte Carlo simulations.","requestFramePermissions":[],"majorCapabilities":["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]}
