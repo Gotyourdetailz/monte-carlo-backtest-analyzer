@@ -6,6 +6,7 @@ import type { ModelValidationReport, TestVerdict } from './modelValidation';
 import type { EVTReport } from './evt';
 import type { AttributionReport } from './benchmarkAttribution';
 import type { TimestampAnalyticsReport } from './timestampAnalytics';
+import type { WalkForwardReport } from './walkForward';
 
 const styles = StyleSheet.create({
   page: {
@@ -430,6 +431,53 @@ const AttributionSection: React.FC<{ a: AttributionReport }> = ({ a }) => {
   );
 };
 
+const WalkForwardSection: React.FC<{ w: WalkForwardReport }> = ({ w }) => (
+  <View>
+    <View style={styles.rowBetween}>
+      <Text style={styles.sectionTitle}>Walk-Forward / Out-of-Sample Validation</Text>
+      <Text style={verdictPillStyle(w.verdict)}>{verdictLabel(w.verdict)}</Text>
+    </View>
+    <Text style={[styles.noteText, { marginBottom: 10 }]}>
+      Train {w.trainSize} -&gt; Test {w.oosSize}. {pdfSafe(w.note)}
+    </Text>
+
+    <View style={[styles.metricsGrid, { marginBottom: 6 }]}>
+      <View style={styles.smallStat}>
+        <Text style={styles.smallStatLabel}>OOS breach rate</Text>
+        <Text style={styles.smallStatValue}>{(w.breachRate * 100).toFixed(1)}%</Text>
+      </View>
+      <View style={styles.smallStat}>
+        <Text style={styles.smallStatLabel}>Expected</Text>
+        <Text style={styles.smallStatValue}>{(w.expectedBreachRate * 100).toFixed(1)}%</Text>
+      </View>
+      <View style={styles.smallStat}>
+        <Text style={styles.smallStatLabel}>Kupiec p</Text>
+        <Text style={styles.smallStatValue}>{fmtP(w.kupiecPValue)}</Text>
+      </View>
+      <View style={styles.smallStat}>
+        <Text style={styles.smallStatLabel}>PIT p</Text>
+        <Text style={styles.smallStatValue}>{fmtP(w.pitPValue)}</Text>
+      </View>
+      <View style={styles.smallStat}>
+        <Text style={styles.smallStatLabel}>KS p</Text>
+        <Text style={styles.smallStatValue}>{fmtP(w.ksPValue)}</Text>
+      </View>
+      <View style={styles.smallStat}>
+        <Text style={styles.smallStatLabel}>Train mean</Text>
+        <Text style={styles.smallStatValue}>${w.trainMean.toFixed(0)}</Text>
+      </View>
+      <View style={styles.smallStat}>
+        <Text style={styles.smallStatLabel}>OOS mean</Text>
+        <Text style={styles.smallStatValue}>${w.oosMean.toFixed(0)}</Text>
+      </View>
+      <View style={styles.smallStat}>
+        <Text style={styles.smallStatLabel}>Train / OOS sigma</Text>
+        <Text style={styles.smallStatValue}>${w.trainStd.toFixed(0)} / ${w.oosStd.toFixed(0)}</Text>
+      </View>
+    </View>
+  </View>
+);
+
 const TimestampSection: React.FC<{ t: TimestampAnalyticsReport; dailyLossLimit?: number }> = ({ t, dailyLossLimit }) => {
   const breaches = dailyLossLimit && dailyLossLimit > 0 ? t.estimatedDailyLimitBreaches(dailyLossLimit) : null;
   return (
@@ -628,6 +676,7 @@ const PdfDocument = ({ resultsMap, imagesMap, dailyLossLimit }: PdfDocumentProps
                 <Text style={styles.subtitle}>SR 11-7 style diagnostics + EVT loss-tail analysis</Text>
               </View>
               {results.modelValidation && <ValidationSection v={results.modelValidation} />}
+              {results.walkForward && <WalkForwardSection w={results.walkForward} />}
               {results.evt && <EVTSection e={results.evt} />}
               <Text
                 style={styles.footer}

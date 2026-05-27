@@ -26,7 +26,10 @@ Open http://localhost:3000
 | **Model validation (SR 11-7 style)** | KS / AD goodness-of-fit, Ljung–Box serial-dep, Kupiec POF + Christoffersen independence VaR backtests, PIT calibration |
 | **EVT tail risk** | Hill tail index, peaks-over-threshold GPD via PWM, EVT-VaR/CVaR alongside empirical |
 | **Benchmark attribution** | Alpha/beta with HC0 robust SE, R², tracking error, information ratio, up/down capture |
+| **Multi-factor attribution** | OLS regression on N factor columns (e.g. Fama-French 3-factor) with HC0 robust SEs, per-factor t-stats and p-values |
+| **Walk-forward / OOS validation** | Train/test split with Kupiec, PIT, and KS scoring on the held-out window |
 | **Calendar-aware analytics** | Daily Sharpe, worst day, day-of-week breakdown, max losing-day streak when a timestamp column is provided |
+| **Persisted run history** | IndexedDB-backed audit log with reproducibility check and JSON export |
 
 ## Data format
 
@@ -65,8 +68,12 @@ Enable columns in the Portfolio tab, normalize weights to 100%, run with **Absol
 - ~~Model-risk validation report (SR 11-7 style)~~ (shipped)
 - ~~EVT loss-tail analysis~~ (shipped)
 - ~~Benchmark / factor attribution~~ (shipped)
+- ~~Multi-factor attribution (HC0)~~ (shipped)
+- ~~Walk-forward / out-of-sample validation~~ (shipped)
+- ~~Persisted run history with audit trail~~ (shipped — local IndexedDB)
 - Server-side batch runs with role-based access
-- Persisted run history with audit trail
+- Position-aware mode (size, instrument, exposure adjusted metrics)
+- Wasm-side calendar enforcement of daily loss limits during simulation
 
 ## Disclaimer
 

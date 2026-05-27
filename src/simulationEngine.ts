@@ -21,14 +21,17 @@ import { computeStressScenarios } from './stressTesting';
 import { computeSimulatedDDDurations } from './drawdownDuration';
 import { buildValidationReport } from './modelValidation';
 import { buildEVTReport } from './evt';
-import { buildAttributionReport } from './benchmarkAttribution';
+import { buildAttributionReport, buildMultiFactorReport } from './benchmarkAttribution';
 import { buildTimestampAnalyticsReport, parseTimestamp } from './timestampAnalytics';
+import { buildWalkForwardReport } from './walkForward';
 
 type SimulationParams = BaseModelConfig & {
   modelType: 'basic' | 'regime' | 'parametric' | 'garch';
   data: DailyData[];
   dataFormat: 'pct' | 'mult' | 'absolute';
   onProgress?: (completed: number, total: number) => void;
+  /** Optional ordered factor labels matching DailyData.factorRow entries. */
+  factorNames?: string[];
 };
 
 // Yield control back to the event loop so worker can post progress messages
@@ -476,6 +479,40 @@ export async function runSimulation(params: SimulationParams): Promise<Simulatio
         dataFormat === 'absolute' ? r.pnl - commissionPerTrade : r.pnl
       )
     );
+  }
+
+  // Walk-forward / out-of-sample validation — only meaningful for absolute PnL with enough history.
+  if (dataFormat === 'absolute' && absPnLsForStress.length >= 50) {
+    const wf = buildWalkForwardReport(absPnLsForStress, { trainFraction: 0.7 });
+    if (wf) statResult.walkForward = wf;
+  }
+
+  // Multi-factor attribution — when factor columns are mapped.
+  const factorNames = (params.factorNames ?? []).filter((s) => !!s && s.length > 0);
+  if (factorNames.length > 0) {
+    const rowsWithFactors = data
+      .map((d, i) => ({
+        ret:
+          dataFormat === 'absolute'
+            ? d.pnl / Math.max(1, startingCapital)
+            : dataFormat === 'pct'
+            ? d.pnl / 100
+            : d.pnl,
+        row: d.factorRow ?? null,
+      }))
+      .filter(
+        (r): r is { ret: number; row: number[] } =>
+          r.row !== null && r.row.length === factorNames.length && r.row.every((v) => isFinite(v))
+      );
+    if (rowsWithFactors.length >= factorNames.length + 5) {
+      const mf = buildMultiFactorReport(
+        rowsWithFactors.map((r) => r.ret),
+        rowsWithFactors.map((r) => r.row),
+        factorNames,
+        annualizationFactor
+      );
+      if (mf) statResult.multiFactor = mf;
+    }
   }
 
   // GARCH params if applicable

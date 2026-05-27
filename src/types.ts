@@ -112,6 +112,8 @@ export type SimulationResults = {
   evt?: import('./evt').EVTReport;
   attribution?: import('./benchmarkAttribution').AttributionReport;
   timestampAnalytics?: import('./timestampAnalytics').TimestampAnalyticsReport;
+  walkForward?: import('./walkForward').WalkForwardReport;
+  multiFactor?: import('./benchmarkAttribution').MultiFactorReport;
 };
 
 export type DailyData = {
@@ -123,6 +125,8 @@ export type DailyData = {
   timestamp?: string;
   /** Optional benchmark per-period return (decimal or %) for attribution */
   benchmarkReturn?: number;
+  /** Optional multi-factor row (e.g. [Mkt-RF, SMB, HML]). Aligns with factorNames in the engine call. */
+  factorRow?: number[];
 };
 
 export type MetricsValidity = {

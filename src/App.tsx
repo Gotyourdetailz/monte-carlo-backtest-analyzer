@@ -23,6 +23,10 @@ import { ModelValidationPanel } from './components/ModelValidationPanel';
 import { EVTPanel } from './components/EVTPanel';
 import { AttributionPanel } from './components/AttributionPanel';
 import { TimestampAnalyticsPanel } from './components/TimestampAnalyticsPanel';
+import { WalkForwardPanel } from './components/WalkForwardPanel';
+import { MultiFactorPanel } from './components/MultiFactorPanel';
+import { RunHistoryPanel } from './components/RunHistoryPanel';
+import { hashSeries, recordRun } from './runHistory';
 import SimWorker from './simulationWorker?worker';
 import { exportToVectorPDF } from './reportGenerator';
 import { ExportModal } from './components/ExportModal';
@@ -58,6 +62,8 @@ export default function App() {
   const [timestampCol, setTimestampCol] = useState<string>('None');
   const [benchmarkCol, setBenchmarkCol] = useState<string>('None');
   const [benchmarkFormat, setBenchmarkFormat] = useState<'pct' | 'mult'>('pct');
+  /** Comma-separated factor column names (e.g. "Mkt-RF, SMB, HML") */
+  const [factorCols, setFactorCols] = useState<string>('');
   const [dataFormat, setDataFormat] = useState<'pct' | 'mult' | 'absolute'>('absolute');
   const [rowFrequency, setRowFrequency] = useState<'trade' | 'day'>('trade');
   const [samplingMode, setSamplingMode] = useState<SamplingMode>('bootstrap');
@@ -101,6 +107,7 @@ export default function App() {
   const [resultsHistory, setResultsHistory] = useState<Record<string, SimulationResults>>({});
   const results = resultsHistory[activeTab] || null;
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [error, setError] = useState('');
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   
@@ -132,11 +139,23 @@ export default function App() {
                 ? benchRaw / 100
                 : benchRaw
               : undefined;
+          const factorNames = factorCols
+            .split(',')
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0);
+          let factorRow: number[] | undefined;
+          if (factorNames.length > 0) {
+            const vals = factorNames.map((n) => parseFinancialNumber(row[n]));
+            if (vals.every((v) => isFinite(v))) {
+              factorRow = benchmarkFormat === 'pct' ? vals.map((v) => v / 100) : vals;
+            }
+          }
           return {
             pnl: parseFinancialNumber(row[pnlCol]),
             regime: regimeCol !== 'None' ? String(row[regimeCol]) : undefined,
             timestamp: timestampCol !== 'None' && row[timestampCol] != null ? String(row[timestampCol]) : undefined,
             benchmarkReturn,
+            factorRow,
           };
         });
       if (!parsed.length) return null;
@@ -150,7 +169,7 @@ export default function App() {
     } catch {
       return null;
     }
-  }, [csvData, pnlCol, regimeCol, dataFormat, startingCapital, commissionPerTrade, rowFrequency, timestampCol, benchmarkCol, benchmarkFormat]);
+  }, [csvData, pnlCol, regimeCol, dataFormat, startingCapital, commissionPerTrade, rowFrequency, timestampCol, benchmarkCol, benchmarkFormat, factorCols]);
 
   const applyPropPreset = (name: string) => {
     setPropPreset(name);
@@ -333,6 +352,21 @@ export default function App() {
               setProgress(Math.round((msg.completed / msg.total) * 100));
           } else if (msg.type === 'result') {
               setResultsHistory(prev => ({ ...prev, [msg.data.modelType]: msg.data }));
+              // Persist for audit / reproducibility (best-effort, non-blocking)
+              const inputForHash =
+                activeTab === 'portfolio'
+                  ? csvData.flatMap((row) =>
+                      portfolioStrategies
+                        .filter((s) => s.enabled)
+                        .map((s) => parseFinancialNumber(s.groupByInstrument ? row[ntProfitCol] : row[s.column]))
+                        .filter((v) => !isNaN(v))
+                    )
+                  : csvData
+                      .map((row) => parseFinancialNumber(row[pnlCol]))
+                      .filter((v) => !isNaN(v));
+              hashSeries(inputForHash)
+                .then((digest) => recordRun(msg.data, digest))
+                .catch(() => {});
               setIsLoading(false);
               worker.terminate();
           } else if (msg.type === 'error') {
@@ -412,6 +446,17 @@ export default function App() {
                   ? benchRaw / 100
                   : benchRaw
                 : undefined;
+            const factorNames = factorCols
+              .split(',')
+              .map((s) => s.trim())
+              .filter((s) => s.length > 0);
+            let factorRow: number[] | undefined;
+            if (factorNames.length > 0) {
+              const vals = factorNames.map((n) => parseFinancialNumber(row[n]));
+              if (vals.every((v) => isFinite(v))) {
+                factorRow = benchmarkFormat === 'pct' ? vals.map((v) => v / 100) : vals;
+              }
+            }
             return {
               pnl: parseFinancialNumber(row[pnlCol]),
               regime: regimeCol !== 'None' ? String(row[regimeCol]) : undefined,
@@ -420,6 +465,7 @@ export default function App() {
                   ? String(row[timestampCol])
                   : undefined,
               benchmarkReturn,
+              factorRow,
             };
           });
 
@@ -456,6 +502,10 @@ export default function App() {
           slippageModel,
           impactCoefficient: 0.1,
           copulaDf,
+          factorNames: factorCols
+            .split(',')
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0),
         });
       }
 
@@ -584,6 +634,29 @@ export default function App() {
         <div className="flex items-center gap-3 mb-8 mt-2">
           <div className="w-8 h-8 bg-gradient-to-br from-[var(--accent-green)] to-[#238636] rounded-lg flex items-center justify-center font-bold text-white text-xs shadow-lg shadow-[#238636]/30">MC</div>
           <h1 className="text-lg font-semibold tracking-tight gradient-text">MC Risk Desk</h1>
+          <button
+            type="button"
+            onClick={() => setIsHistoryOpen(true)}
+            aria-label="Open run history"
+            title="Run history"
+            className="btn-press ml-auto p-1.5 rounded-md text-[var(--text-secondary)] hover:text-[var(--accent-blue)] hover:bg-[var(--accent-blue)]/10"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M3 12a9 9 0 1 0 3-6.7" />
+              <path d="M3 4v5h5" />
+              <path d="M12 7v5l3 2" />
+            </svg>
+          </button>
         </div>
 
         <div className="space-y-6 flex-1 pr-1">
@@ -832,6 +905,23 @@ export default function App() {
                 )}
                 <p className="text-[10px] text-[#8b949e] mt-1 leading-tight">
                   Enables alpha/beta, R², tracking error, information ratio, up/down capture with HC0 std errors.
+                </p>
+              </div>
+            )}
+
+            {activeTab !== 'portfolio' && (
+              <div>
+                <label className="block text-xs font-medium text-[#c9d1d9] mb-1">Factor Columns (Optional)</label>
+                <input
+                  type="text"
+                  value={factorCols}
+                  onChange={(e) => setFactorCols(e.target.value)}
+                  placeholder="e.g. Mkt-RF, SMB, HML"
+                  className="w-full text-xs p-2 outline-none border border-[#30363d] rounded bg-[#161b22] text-white focus:border-[#58a6ff] transition-colors"
+                />
+                <p className="text-[10px] text-[#8b949e] mt-1 leading-tight">
+                  Comma-separated CSV column names. Adds a multi-factor regression panel (e.g. Fama-French 3-factor)
+                  with HC0 robust SEs. Uses the same pct/decimal format as benchmark.
                 </p>
               </div>
             )}
@@ -1152,10 +1242,10 @@ export default function App() {
                 !csvData.length ||
                 (activeTab === 'portfolio' && enabledPortfolioCount < 2)
               }
-              className={`w-full bg-gradient-to-r from-[#238636] to-[#2ea043] hover:from-[#2ea043] hover:to-[#3fb950] disabled:opacity-50 disabled:cursor-not-allowed text-white py-2.5 rounded-lg text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-[#238636]/30 hover:shadow-[#238636]/50 cursor-pointer ${isLoading ? 'animate-pulse' : ''}`}
+              className={`btn-press w-full bg-gradient-to-r from-[#238636] to-[#2ea043] hover:from-[#2ea043] hover:to-[#3fb950] disabled:opacity-50 disabled:cursor-not-allowed text-white py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#238636]/30 hover:shadow-[#238636]/50 ${isLoading ? 'animate-pulse' : ''}`}
             >
               {isLoading ? (
-                <span>RUNNING... {progress}%</span>
+                <span className="tabular">RUNNING... {progress}%</span>
               ) : (
                 <span>RUN SIMULATIONS</span>
               )}
@@ -1521,10 +1611,16 @@ export default function App() {
               {/* EVT — heavy-tail loss analysis */}
               {results.evt && <EVTPanel evt={results.evt} />}
 
+              {/* Walk-forward / out-of-sample validation */}
+              {results.walkForward && <WalkForwardPanel report={results.walkForward} />}
+
               {/* Benchmark Attribution (only if benchmark column mapped) */}
               {results.attribution && (
                 <AttributionPanel attribution={results.attribution} />
               )}
+
+              {/* Multi-Factor Attribution (only if factor columns mapped) */}
+              {results.multiFactor && <MultiFactorPanel report={results.multiFactor} />}
 
               {/* Calendar-aware analytics (only if timestamp column mapped) */}
               {results.timestampAnalytics && (
@@ -1550,6 +1646,7 @@ export default function App() {
         onExport={handleGeneratePdf}
         isExportingPdf={isExportingPdf}
       />
+      <RunHistoryPanel open={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} />
       <HiddenChartCapture resultsHistory={resultsHistory} />
     </div>
   );
