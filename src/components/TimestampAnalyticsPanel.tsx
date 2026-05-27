@@ -28,7 +28,7 @@ export function TimestampAnalyticsPanel({ report, dailyLossLimit }: Props) {
   }));
 
   return (
-    <div className="glass-card animate-fade-in-up overflow-hidden">
+    <div className="glass-card panel-enter overflow-hidden">
       <div className="px-6 py-4 border-b border-[#30363d]/50 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <span className="text-[10px] text-[var(--accent-blue)] uppercase font-bold tracking-wider">
