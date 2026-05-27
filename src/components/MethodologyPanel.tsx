@@ -58,7 +58,7 @@ export function MethodologyPanel({ modelType, samplingMode, portfolioResampling 
       <p className="mb-2 text-[var(--text-secondary)]">{modelDesc}</p>
       <ul className="list-disc pl-4 space-y-1 opacity-70">
         <li>Results describe distribution of outcomes under the chosen resampling assumptions — not forecasts.</li>
-        <li>Fixed seeds enable reproducible runs for audit and allocator review.</li>
+        <li>Fixed seeds enable reproducible runs for audit. Note: Core engine uses Rust's StdRng (ChaCha12). Seeded paths will cleanly reproduce in v2.0, but diverge from legacy v1.0 TypeScript paths.</li>
         <li>VaR/CVaR are computed on simulated terminal PnL, consistent with buy-side risk reporting conventions.</li>
         <li>Daily loss limits use synthetic sessions unless trade timestamps are provided (calendar mode planned).</li>
       </ul>

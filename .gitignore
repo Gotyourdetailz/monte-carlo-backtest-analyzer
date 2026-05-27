@@ -5,4 +5,12 @@ coverage/
 .DS_Store
 *.log
 .env*
-!.env.example
+
+# Rust build artifacts (committed pkg/ output stays)
+wasm-engine/target/
+
+# Local scratch / installers (not source)
+rustup-init.exe
+export.cjs
+replace.cjs
+catch_error.cjs
