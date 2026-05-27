@@ -53,6 +53,13 @@ async function metricsAtScale(
     dailyMaxLosses: 0,
     dailyMaxLossDollars: 0,
     tradesPerSession: 1,
+    positionSizeMultiplier: 1,
+    regimeSource: 'None',
+    autoRegimeWindow: 10,
+    autoRegimeThreshold: 50,
+    slippageModel: 'none',
+    impactCoefficient: 0.1,
+    copulaDf: 5,
   });
 
   const pnls = result.finalBalances.map((b) => b - params.startingCapital);

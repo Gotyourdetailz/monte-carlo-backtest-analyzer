@@ -266,6 +266,7 @@ export async function runPortfolioSimulation(
   const {
     strategies,
     nSimulations,
+    nTrades,
     startingCapital,
     ruinThreshold,
     dataFormat,

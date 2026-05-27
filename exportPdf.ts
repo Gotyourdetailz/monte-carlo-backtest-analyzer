@@ -3,7 +3,7 @@ import path from 'path';
 
 async function main() {
   console.log("Launching browser...");
-  const browser = await puppeteer.launch({ headless: 'new' });
+  const browser = await puppeteer.launch({ headless: true });
   const page = await browser.newPage();
   
   const downloadPath = path.resolve('C:\\Users\\demir\\antigravity\\Monte-Carlo-Backtest-Analyzer');

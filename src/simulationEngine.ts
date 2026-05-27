@@ -19,6 +19,10 @@ import { fitGarch11, simulateGarchPath } from './garch';
 import { computeConvergence } from './convergenceDiagnostics';
 import { computeStressScenarios } from './stressTesting';
 import { computeSimulatedDDDurations } from './drawdownDuration';
+import { buildValidationReport } from './modelValidation';
+import { buildEVTReport } from './evt';
+import { buildAttributionReport } from './benchmarkAttribution';
+import { buildTimestampAnalyticsReport, parseTimestamp } from './timestampAnalytics';
 
 type SimulationParams = BaseModelConfig & {
   modelType: 'basic' | 'regime' | 'parametric' | 'garch';
@@ -213,350 +217,104 @@ export async function runSimulation(params: SimulationParams): Promise<Simulatio
   });
 
   // Engine Initialization
-  let simulatePath: () => number[];
-
-  if (modelType === 'basic') {
-    // Pre-compute block bootstrap parameters if needed
-    const blockInfo = samplingMode === 'block_bootstrap'
-      ? optimalBlockLength(originalPnLs)
-      : null;
-    const avgBlock = blockInfo ? blockInfo.avgBlockLength : 1;
-
-    // Build slippage config
-    const slippageConfig: SlippageConfig = {
-      model: params.slippageModel || 'fixed',
-      fixedSlippagePerTrade: commissionPerTrade,
-      impactCoefficient: params.impactCoefficient || 0.1,
-      baseVolatility: dataFormat === 'absolute' ? estimateBaseVolatility(originalPnLs) : 0,
-    };
-
-    simulatePath = () => {
-      const path = [startingCapital];
-      let sessionLossCount = 0;
-      let sessionDollarLoss = 0;
-
-      let tradeSequence: number[];
-      if (samplingMode === 'permutation') {
-        const indices = originalPnLs.map((_, i) => i);
-        shuffleInPlace(indices, rng);
-        tradeSequence = indices.map((i) => originalPnLs[i]);
-      } else if (samplingMode === 'block_bootstrap') {
-        tradeSequence = stationaryBlockBootstrap(originalPnLs, nTrades, avgBlock, rng);
-      } else {
-        tradeSequence = [];
-      }
-
-      for (let t = 0; t < nTrades; t++) {
-        if (params.dailyLossLimitEnabled && t % params.tradesPerSession === 0) {
-            sessionLossCount = 0;
-            sessionDollarLoss = 0;
-        }
-
-        if (params.dailyLossLimitEnabled && (sessionLossCount >= params.dailyMaxLosses || sessionDollarLoss <= -params.dailyMaxLossDollars)) {
-            path.push(path[path.length - 1]);
-            continue;
-        }
-
-        const ret =
-          (samplingMode === 'permutation' || samplingMode === 'block_bootstrap')
-            ? tradeSequence[t % tradeSequence.length]
-            : originalPnLs[Math.floor(rng() * originalPnLs.length)];
-
-        // Dynamic slippage
-        const slip = computeSlippage(slippageConfig, ret, positionSizeMultiplier, slippageConfig.baseVolatility);
-
-        let newBalance = 0;
-        if (dataFormat === 'absolute') {
-          newBalance = path[path.length - 1] + ret - slip;
-        } else {
-          newBalance = path[path.length - 1] * ret;
-        }
-        path.push(newBalance);
-
-        if (params.dailyLossLimitEnabled) {
-          const tradePnL = newBalance - path[path.length - 2];
-          if (tradePnL < 0) sessionLossCount++;
-          sessionDollarLoss += tradePnL;
-        }
-      }
-      return path;
-    };
-
-  } else if (modelType === 'regime') {
-    // Regime-Switching Model
-    const regimes = uniqueRegimes;
-    const transitionCounts: Record<string, Record<string, number>> = {};
-    const regimePnls: Record<string, number[]> = {};
-
-    regimes.forEach(r => {
-      transitionCounts[r] = {};
-      regimes.forEach(r2 => transitionCounts[r][r2] = 0);
-      regimePnls[r] = [];
-    });
-
-    for (let i = 0; i < absolutePnLs.length; i++) {
-        const r = finalRegimeTags[i];
-        regimePnls[r].push(originalPnLs[i]);
-        if (i < absolutePnLs.length - 1) {
-            const nextR = finalRegimeTags[i + 1];
-            transitionCounts[r][nextR]++;
-        }
-    }
-
-    // Convert counts to probabilities
-    const transitionProbs: Record<string, Record<string, number>> = {};
-    for (const r of regimes) {
-        let total = 0;
-        for (const r2 of regimes) total += transitionCounts[r][r2];
-        transitionProbs[r] = {};
-        for (const r2 of regimes) {
-            transitionProbs[r][r2] = total > 0 ? transitionCounts[r][r2] / total : (1 / regimes.length);
-        }
-    }
-
-    simulatePath = () => {
-      const path = [startingCapital];
-      let currentRegime = regimes[Math.floor(rng() * regimes.length)];
-      let sessionLossCount = 0;
-      let sessionDollarLoss = 0;
-      for (let t = 0; t < nTrades; t++) {
-        if (params.dailyLossLimitEnabled && t % params.tradesPerSession === 0) {
-            sessionLossCount = 0;
-            sessionDollarLoss = 0;
-        }
-
-        if (params.dailyLossLimitEnabled && (sessionLossCount >= params.dailyMaxLosses || sessionDollarLoss <= -params.dailyMaxLossDollars)) {
-            path.push(path[path.length - 1]);
-            continue;
-        }
-
-        // Draw PnL
-        const pnlList = regimePnls[currentRegime];
-        const ret = pnlList.length > 0 ? pnlList[Math.floor(rng() * pnlList.length)] : (dataFormat === 'absolute' ? 0 : 1);
-        let newBalance = 0;
-        if (dataFormat === 'absolute') {
-          newBalance = path[path.length - 1] + ret - commissionPerTrade;
-        } else {
-          newBalance = path[path.length - 1] * ret;
-        }
-        path.push(newBalance);
-
-        if (params.dailyLossLimitEnabled) {
-          const tradePnL = newBalance - path[path.length - 2];
-          if (tradePnL < 0) sessionLossCount++;
-          sessionDollarLoss += tradePnL;
-        }
-
-        // Transition Regime
-        const probs = transitionProbs[currentRegime];
-        let rand = rng();
-        let cumulative = 0;
-        for (const [nextR, prob] of Object.entries(probs)) {
-          cumulative += prob;
-          if (rand <= cumulative) {
-            currentRegime = nextR;
-            break;
-          }
-        }
-      }
-      return path;
-    };
-
-  } else {
-    // Parametric Model — MLE-fitted distribution (Normal or Student-t)
-    const fitInput = dataFormat === 'absolute' ? originalPnLs.map(p => p - commissionPerTrade) : originalPnLs.map(x => x - 1);
-    const fitResult = fitBestDistribution(fitInput);
-    const fittedDist = fitResult.best;
-    const fittedMu = fittedDist.mu;
-    const fittedSigma = fittedDist.sigma;
-    const fittedDf = fittedDist.df ?? 30; // fallback for Normal (high df ≈ normal)
-
-    simulatePath = () => {
-      const path = [startingCapital];
-      let sessionLossCount = 0;
-      let sessionDollarLoss = 0;
-      for (let t = 0; t < nTrades; t++) {
-        if (params.dailyLossLimitEnabled && t % params.tradesPerSession === 0) {
-            sessionLossCount = 0;
-            sessionDollarLoss = 0;
-        }
-
-        if (params.dailyLossLimitEnabled && (sessionLossCount >= params.dailyMaxLosses || sessionDollarLoss <= -params.dailyMaxLossDollars)) {
-            path.push(path[path.length - 1]);
-            continue;
-        }
-
-        // Draw from MLE-fitted distribution
-        const tVal = fittedDist.type === 'student_t'
-          ? randomStudentT(fittedDf, rng)
-          : randomStudentT(30, rng); // Normal ≈ t(30)
-        
-        let newBalance = 0;
-        if (dataFormat === 'absolute') {
-            const simulatedDraw = fittedMu + tVal * fittedSigma;
-            newBalance = path[path.length - 1] + simulatedDraw - commissionPerTrade;
-        } else {
-            const simulatedDraw = fittedMu + tVal * fittedSigma;
-            const ret = 1 + simulatedDraw;
-            newBalance = Math.max(0, path[path.length - 1] * ret);
-        }
-        path.push(newBalance);
-
-        if (params.dailyLossLimitEnabled) {
-          const tradePnL = newBalance - path[path.length - 2];
-          if (tradePnL < 0) sessionLossCount++;
-          sessionDollarLoss += tradePnL;
-        }
-      }
-      return path;
-    };
-
-    // Store fit result for UI display
-    (params as any).__fittedDist = fittedDist;
-  }
-
-  // ═══ GARCH(1,1) Model ═══
+  const blockInfo = samplingMode === 'block_bootstrap' ? optimalBlockLength(originalPnLs) : null;
+  const avgBlock = blockInfo ? blockInfo.avgBlockLength : 1;
+  const baseVol = dataFormat === 'absolute' ? estimateBaseVolatility(originalPnLs) : 0;
+  
+  let gOmega = (params as any).garchOmega;
+  let gAlpha = (params as any).garchAlpha;
+  let gBeta = (params as any).garchBeta;
+  let gMu = (params as any).garchMu;
   if (modelType === 'garch') {
-    const fitInput = dataFormat === 'absolute' ? originalPnLs.map(p => p - commissionPerTrade) : originalPnLs.map(x => x - 1);
-    const garchResult = fitGarch11(fitInput);
-    const garchParams = garchResult.params;
-    
-    // Also fit distribution for innovation type
-    const fitResult = fitBestDistribution(fitInput);
-    const fittedDist = fitResult.best;
-    const innovDf = fittedDist.type === 'student_t' && fittedDist.df ? fittedDist.df : undefined;
-    
-    // Store for UI
-    (params as any).__garchFit = garchParams;
-    (params as any).__fittedDist = fittedDist;
-    
-    simulatePath = () => {
-      const garchPnLs = simulateGarchPath(garchParams, nTrades, rng, innovDf);
-      const path = [startingCapital];
-      let sessionLossCount = 0;
-      let sessionDollarLoss = 0;
-      for (let t = 0; t < nTrades; t++) {
-        if (params.dailyLossLimitEnabled && t % params.tradesPerSession === 0) {
-          sessionLossCount = 0;
-          sessionDollarLoss = 0;
-        }
-        if (params.dailyLossLimitEnabled && (sessionLossCount >= params.dailyMaxLosses || sessionDollarLoss <= -params.dailyMaxLossDollars)) {
-          path.push(path[path.length - 1]);
-          continue;
-        }
-        let newBalance: number;
-        if (dataFormat === 'absolute') {
-          newBalance = path[path.length - 1] + garchPnLs[t];
-        } else {
-          newBalance = Math.max(0, path[path.length - 1] * (1 + garchPnLs[t]));
-        }
-        path.push(newBalance);
-        if (params.dailyLossLimitEnabled) {
-          const tradePnL = newBalance - path[path.length - 2];
-          if (tradePnL < 0) sessionLossCount++;
-          sessionDollarLoss += tradePnL;
-        }
-      }
-      return path;
-    };
+      const fitted = fitGarch11(originalPnLs);
+      gOmega = fitted.params.omega;
+      gAlpha = fitted.params.alpha;
+      gBeta = fitted.params.beta;
+      gMu = fitted.params.mu;
+      (params as any).__garchFit = fitted;
   }
 
-  // 3. Execution
-  const storedPaths: number[][] = [];
-  const pathStoreInterval = Math.max(1, Math.floor(nSimulations / MAX_STORED_PATHS));
+  const { default: initWasm, run_mc_simulation } = await import('wasm-engine');
+  try {
+    await initWasm();
+  } catch (_) {
+    // Already initialized — safe to ignore
+  }
+
+  const wasmParams = {
+      n_simulations: nSimulations,
+      n_trades: nTrades,
+      starting_capital: startingCapital,
+      original_pnls: originalPnLs,
+      data_format: dataFormat,
+      commission_per_trade: commissionPerTrade,
+      model_type: modelType,
+      sampling_mode: samplingMode,
+      avg_block_length: avgBlock,
+      periods_per_year: periodsPerYear,
+      random_seed: randomSeed,
+      ruin_threshold: ruinThreshold,
+      position_size_multiplier: positionSizeMultiplier,
+      slippage_model: params.slippageModel,
+      impact_coefficient: params.impactCoefficient,
+      base_volatility: baseVol,
+      daily_loss_limit_enabled: params.dailyLossLimitEnabled,
+      trades_per_session: params.tradesPerSession,
+      daily_max_losses: params.dailyMaxLosses,
+      daily_max_loss_dollars: params.dailyMaxLossDollars,
+      prop_firm_rules_enabled: params.propFirmRulesEnabled,
+      prop_target: params.propTarget,
+      prop_max_drawdown: params.propMaxDrawdown,
+      prop_consistency_percent: params.propConsistencyPercent,
+      garch_omega: gOmega,
+      garch_alpha: gAlpha,
+      garch_beta: gBeta,
+      garch_mu: gMu,
+      regime_tags: modelType === 'regime' ? finalRegimeTags : undefined
+  };
+
+  const wasmResStr = run_mc_simulation(JSON.stringify(wasmParams));
+  const wasmRes = JSON.parse(wasmResStr);
+
   const finalBalances: number[] = [];
   const maxDrawdowns: number[] = [];
-  let ruinS = 0;
-  const ruinVal = startingCapital * (1 - (ruinThreshold / 100));
+  const allEndPnls: number[] = [];
+  const storedPaths: number[][] = [];
+  const tradesToTarget: number[] = [];
   let evSum = 0;
-  let allEndPnls: number[] = [];
-
+  let ruinS = 0;
   let passedCount = 0;
   let failDrawdownCount = 0;
   let failConsistencyCount = 0;
   let failTimeCount = 0;
-  const tradesToTarget: number[] = []; // Track how many trades each passing sim took
-  const { propFirmRulesEnabled, propTarget, propMaxDrawdown, propConsistencyPercent } = params;
 
-  for (let i = 0; i < nSimulations; i++) {
-    if (i > 0 && i % CHUNK_SIZE === 0) {
-      if (onProgress) onProgress(i, nSimulations);
-      await yieldToEventLoop();
-    }
-    const path = simulatePath();
-    if (i % pathStoreInterval === 0 && storedPaths.length < MAX_STORED_PATHS) {
-      storedPaths.push(path);
-    }
-    const finalBalance = path[path.length - 1];
-    finalBalances.push(finalBalance);
-    
-    let pathReturn = 0;
-    if (dataFormat === 'absolute') {
-        pathReturn = (finalBalance - startingCapital) / Math.max(1, nTrades);
-    } else {
-        pathReturn = finalBalance > 0 ? (Math.pow(finalBalance / startingCapital, 1/Math.max(1, nTrades)) - 1) : -1;
-    }
-    allEndPnls.push(pathReturn);
-    evSum += pathReturn || 0;
+  finalBalances.push(...wasmRes.final_balances);
+  maxDrawdowns.push(...wasmRes.max_drawdowns);
 
-    const maxDd = calculateMaxDrawdown(path);
-    maxDrawdowns.push(maxDd || 0);
+  if (wasmRes.stored_paths && Array.isArray(wasmRes.stored_paths)) {
+    storedPaths.push(...wasmRes.stored_paths);
+  }
 
-    let isRuin = false;
-    for (let pt of path) {
-        if (pt <= ruinVal) {
-            isRuin = true;
-            break;
-        }
-    }
-    if (isRuin) ruinS++;
-
-    // Prop Firm Rules Check
-    if (propFirmRulesEnabled) {
-      let isDone = false;
-      let peakBal = startingCapital;
-      let tradeProfits: number[] = [];
-
-      for (let t = 1; t < path.length; t++) {
-        const bal = path[t];
-        const prevBal = path[t-1];
-        const tradeProfit = bal - prevBal;
-        tradeProfits.push(tradeProfit);
-        
-        if (bal > peakBal) peakBal = bal;
-
-        const trailingDrawdown = peakBal - bal;
-        if (trailingDrawdown >= propMaxDrawdown) {
-          failDrawdownCount++;
-          isDone = true;
-          break;
-        }
-
-        const totalProfit = bal - startingCapital;
-        if (totalProfit >= propTarget) {
-          const consistencyThreshold = totalProfit * (propConsistencyPercent / 100);
-          let failedConsistency = false;
-          for (const tp of tradeProfits) {
-              if (tp > consistencyThreshold) {
-                  failedConsistency = true;
-                  break;
-              }
-          }
-          if (failedConsistency) {
-              failConsistencyCount++;
-          } else {
-              passedCount++;
-              tradesToTarget.push(t); // Record how many trades it took
-          }
-          isDone = true;
-          break;
-        }
+  for (const finalBal of wasmRes.final_balances) {
+      let pathReturn = 0;
+      if (dataFormat === 'absolute') {
+          pathReturn = (finalBal - startingCapital) / Math.max(1, nTrades);
+      } else {
+          pathReturn = finalBal > 0 ? (Math.pow(finalBal / startingCapital, 1/Math.max(1, nTrades)) - 1) : -1;
       }
+      allEndPnls.push(pathReturn);
+  }
 
-      if (!isDone) {
-        failTimeCount++;
-      }
-    }
+  evSum = wasmRes.mean_ev * nSimulations;
+  ruinS = Math.round((wasmRes.ruin_probability / 100) * nSimulations);
+
+  passedCount = wasmRes.passed_count;
+  failDrawdownCount = wasmRes.fail_drawdown_count;
+  failConsistencyCount = wasmRes.fail_consistency_count;
+  failTimeCount = wasmRes.fail_time_count;
+
+  if (wasmRes.distribution_fit) {
+      (params as any).__fittedDist = wasmRes.distribution_fit;
   }
 
   if (onProgress) onProgress(nSimulations, nSimulations);
@@ -653,12 +411,79 @@ export async function runSimulation(params: SimulationParams): Promise<Simulatio
   // Drawdown duration analysis across simulated paths
   statResult.drawdownDuration = computeSimulatedDDDurations(storedPaths);
 
-  // GARCH params if applicable
-  if ((params as any).__garchFit) {
-    statResult.garchFit = (params as any).__garchFit;
+  // ─── Institutional add-ons ───
+  // Model validation: GoF, serial dependence, VaR backtest, PIT.
+  // Use one stored path's increments (if any) to test resampler dependence.
+  const repPath = storedPaths.length > 0 ? storedPaths[0] : null;
+  const repIncrements = repPath
+    ? repPath.slice(1).map((v, i) => v - repPath[i])
+    : undefined;
+  const terminalPnLForGoF = finalBalances.map((b) => b - startingCapital);
+  const validationRng = randomSeed != null ? createSeededRng(randomSeed + 7919) : Math.random;
+  if (terminalValid) {
+    statResult.modelValidation = buildValidationReport({
+      historicalPnL: absPnLsForStress,
+      simulatedTerminalPnL: terminalPnLForGoF,
+      simulatedIncrements: repIncrements,
+      horizon: nTrades,
+      rng: validationRng,
+    });
   }
 
-  if (propFirmRulesEnabled) {
+  // EVT — only meaningful when we have absolute-dollar PnLs with enough losses
+  if (dataFormat === 'absolute' && absPnLsForStress.filter((v) => v < 0).length >= 30) {
+    statResult.evt = buildEVTReport(absPnLsForStress, 0.9);
+  }
+
+  // Benchmark attribution — only if user supplied a benchmark column
+  const hasBenchmark = data.some((d) => typeof d.benchmarkReturn === 'number' && isFinite(d.benchmarkReturn));
+  if (hasBenchmark) {
+    // Strategy returns: per-period return on starting capital (stable scaling).
+    // Benchmark returns are passed in by the caller in the same convention.
+    const aligned = data
+      .map((d) => ({
+        ret:
+          dataFormat === 'absolute'
+            ? d.pnl / Math.max(1, startingCapital)
+            : dataFormat === 'pct'
+            ? d.pnl / 100
+            : d.pnl,
+        bench: d.benchmarkReturn,
+      }))
+      .filter((row) => typeof row.bench === 'number' && isFinite(row.bench as number));
+    if (aligned.length >= 10) {
+      try {
+        statResult.attribution = buildAttributionReport(
+          aligned.map((r) => r.ret),
+          aligned.map((r) => r.bench as number),
+          annualizationFactor
+        );
+      } catch {
+        // Suppress attribution failures; report builds without it.
+      }
+    }
+  }
+
+  // Timestamp analytics — only when a timestamp column has been mapped
+  const tsRows = data
+    .map((d) => ({ t: d.timestamp ? parseTimestamp(d.timestamp) : null, pnl: d.pnl }))
+    .filter((r): r is { t: Date; pnl: number } => r.t !== null);
+  if (tsRows.length >= 5) {
+    statResult.timestampAnalytics = buildTimestampAnalyticsReport(
+      tsRows.map((r) => r.t),
+      // Use absolute dollars when available; otherwise feed raw values.
+      tsRows.map((r) =>
+        dataFormat === 'absolute' ? r.pnl - commissionPerTrade : r.pnl
+      )
+    );
+  }
+
+  // GARCH params if applicable
+  if ((params as any).__garchFit) {
+    statResult.garchFit = (params as any).__garchFit.params;
+  }
+
+  if (params.propFirmRulesEnabled) {
     const sortedTTT = [...tradesToTarget].sort((a,b) => a-b);
     statResult.propEvalStats = {
       passRate: (passedCount / nSimulations) * 100,
