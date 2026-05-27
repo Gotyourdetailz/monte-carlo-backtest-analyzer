@@ -19,6 +19,10 @@ import { PortfolioRegimePanel } from './components/PortfolioRegimePanel';
 import { PositionSizingPanel } from './components/PositionSizingPanel';
 import { ConvergencePanel } from './components/ConvergencePanel';
 import { StressTestPanel } from './components/StressTestPanel';
+import { ModelValidationPanel } from './components/ModelValidationPanel';
+import { EVTPanel } from './components/EVTPanel';
+import { AttributionPanel } from './components/AttributionPanel';
+import { TimestampAnalyticsPanel } from './components/TimestampAnalyticsPanel';
 import SimWorker from './simulationWorker?worker';
 import { exportToVectorPDF } from './reportGenerator';
 import { ExportModal } from './components/ExportModal';
@@ -51,6 +55,9 @@ export default function App() {
   // Mappings
   const [pnlCol, setPnlCol] = useState<string>('');
   const [regimeCol, setRegimeCol] = useState<string>('None');
+  const [timestampCol, setTimestampCol] = useState<string>('None');
+  const [benchmarkCol, setBenchmarkCol] = useState<string>('None');
+  const [benchmarkFormat, setBenchmarkFormat] = useState<'pct' | 'mult'>('pct');
   const [dataFormat, setDataFormat] = useState<'pct' | 'mult' | 'absolute'>('absolute');
   const [rowFrequency, setRowFrequency] = useState<'trade' | 'day'>('trade');
   const [samplingMode, setSamplingMode] = useState<SamplingMode>('bootstrap');
@@ -117,10 +124,21 @@ export default function App() {
           if (row[pnlCol] === null || row[pnlCol] === undefined || row[pnlCol] === '') return false;
           return !isNaN(parseFinancialNumber(row[pnlCol]));
         })
-        .map((row) => ({
-          pnl: parseFinancialNumber(row[pnlCol]),
-          regime: regimeCol !== 'None' ? String(row[regimeCol]) : undefined,
-        }));
+        .map((row) => {
+          const benchRaw = benchmarkCol !== 'None' ? parseFinancialNumber(row[benchmarkCol]) : NaN;
+          const benchmarkReturn =
+            isFinite(benchRaw)
+              ? benchmarkFormat === 'pct'
+                ? benchRaw / 100
+                : benchRaw
+              : undefined;
+          return {
+            pnl: parseFinancialNumber(row[pnlCol]),
+            regime: regimeCol !== 'None' ? String(row[regimeCol]) : undefined,
+            timestamp: timestampCol !== 'None' && row[timestampCol] != null ? String(row[timestampCol]) : undefined,
+            benchmarkReturn,
+          };
+        });
       if (!parsed.length) return null;
       return previewHistoricalStats(
         parsed,
@@ -132,7 +150,7 @@ export default function App() {
     } catch {
       return null;
     }
-  }, [csvData, pnlCol, regimeCol, dataFormat, startingCapital, commissionPerTrade, rowFrequency]);
+  }, [csvData, pnlCol, regimeCol, dataFormat, startingCapital, commissionPerTrade, rowFrequency, timestampCol, benchmarkCol, benchmarkFormat]);
 
   const applyPropPreset = (name: string) => {
     setPropPreset(name);
@@ -349,9 +367,11 @@ export default function App() {
           return { id: st.column, name: st.name, weight: st.weight, data };
         });
 
+        const horizon = Math.max(...strategies.map(s => s.data.length));
+
         worker.postMessage({
           nSimulations,
-          nTrades: parsedData.length,
+          nTrades: horizon,
           startingCapital,
           ruinThreshold,
           modelType: 'portfolio',
@@ -384,10 +404,24 @@ export default function App() {
             if (row[pnlCol] === null || row[pnlCol] === undefined || row[pnlCol] === '') return false;
             return !isNaN(parseFinancialNumber(row[pnlCol]));
           })
-          .map((row) => ({
-            pnl: parseFinancialNumber(row[pnlCol]),
-            regime: regimeCol !== 'None' ? String(row[regimeCol]) : undefined,
-          }));
+          .map((row) => {
+            const benchRaw = benchmarkCol !== 'None' ? parseFinancialNumber(row[benchmarkCol]) : NaN;
+            const benchmarkReturn =
+              isFinite(benchRaw)
+                ? benchmarkFormat === 'pct'
+                  ? benchRaw / 100
+                  : benchRaw
+                : undefined;
+            return {
+              pnl: parseFinancialNumber(row[pnlCol]),
+              regime: regimeCol !== 'None' ? String(row[regimeCol]) : undefined,
+              timestamp:
+                timestampCol !== 'None' && row[timestampCol] != null
+                  ? String(row[timestampCol])
+                  : undefined,
+              benchmarkReturn,
+            };
+          });
 
         if (parsedData.length === 0) {
           throw new Error('No valid numeric data found in the selected column.');
@@ -526,7 +560,12 @@ export default function App() {
   const handleGeneratePdf = async (selectedModels: string[]) => {
     setIsExportingPdf(true);
     try {
-      await exportToVectorPDF(selectedModels, resultsHistory);
+      await exportToVectorPDF(
+        selectedModels,
+        resultsHistory,
+        'Institutional_Report.pdf',
+        dailyLossLimitEnabled ? dailyMaxLossDollars : undefined
+      );
       setIsExportModalOpen(false);
     } catch (err) {
       console.error(err);
@@ -715,8 +754,7 @@ export default function App() {
                 <option value="None">None (Default)</option>
                 <option value="AUTO">Auto-Detect (Rolling Win-Rate)</option>
                 {columns.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-              {regimeCol === 'AUTO' && (
+              </select>{regimeCol === 'AUTO' && (
                 <div className="mt-3 p-3 bg-[#161b22] border border-[#30363d] rounded-lg space-y-3 animate-in fade-in">
                   <div>
                     <div className="flex justify-between text-[10px] mb-1">
@@ -748,6 +786,54 @@ export default function App() {
                 </div>
               )}
             </div>
+            )}
+
+            {activeTab !== 'portfolio' && (
+              <div>
+                <label className="block text-xs font-medium text-[#c9d1d9] mb-1">Timestamp Column (Optional)</label>
+                <select
+                  value={timestampCol}
+                  onChange={(e) => setTimestampCol(e.target.value)}
+                  className="w-full text-sm p-2 outline-none border border-[#30363d] rounded bg-[#161b22] text-white focus:border-[#58a6ff] transition-colors"
+                >
+                  <option value="None">None</option>
+                  {columns.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-[#8b949e] mt-1 leading-tight">
+                  Enables calendar-aware analytics: daily Sharpe, worst day, day-of-week, daily-loss breach count.
+                </p>
+              </div>
+            )}
+
+            {activeTab !== 'portfolio' && (
+              <div>
+                <label className="block text-xs font-medium text-[#c9d1d9] mb-1">Benchmark Return Column (Optional)</label>
+                <select
+                  value={benchmarkCol}
+                  onChange={(e) => setBenchmarkCol(e.target.value)}
+                  className="w-full text-sm p-2 outline-none border border-[#30363d] rounded bg-[#161b22] text-white focus:border-[#58a6ff] transition-colors"
+                >
+                  <option value="None">None</option>
+                  {columns.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+                {benchmarkCol !== 'None' && (
+                  <select
+                    value={benchmarkFormat}
+                    onChange={(e) => setBenchmarkFormat(e.target.value as 'pct' | 'mult')}
+                    className="mt-2 w-full text-sm p-2 outline-none border border-[#30363d] rounded bg-[#161b22] text-white focus:border-[#58a6ff] transition-colors"
+                  >
+                    <option value="pct">Percent (e.g. 1.5 means 1.5%)</option>
+                    <option value="mult">Decimal (e.g. 0.015 means 1.5%)</option>
+                  </select>
+                )}
+                <p className="text-[10px] text-[#8b949e] mt-1 leading-tight">
+                  Enables alpha/beta, R², tracking error, information ratio, up/down capture with HC0 std errors.
+                </p>
+              </div>
             )}
           </div>
 
@@ -1425,6 +1511,27 @@ export default function App() {
               {/* Convergence Diagnostics */}
               {results.convergence && (
                 <ConvergencePanel convergence={results.convergence} />
+              )}
+
+              {/* Model Validation (SR 11-7) */}
+              {results.modelValidation && (
+                <ModelValidationPanel validation={results.modelValidation} />
+              )}
+
+              {/* EVT — heavy-tail loss analysis */}
+              {results.evt && <EVTPanel evt={results.evt} />}
+
+              {/* Benchmark Attribution (only if benchmark column mapped) */}
+              {results.attribution && (
+                <AttributionPanel attribution={results.attribution} />
+              )}
+
+              {/* Calendar-aware analytics (only if timestamp column mapped) */}
+              {results.timestampAnalytics && (
+                <TimestampAnalyticsPanel
+                  report={results.timestampAnalytics}
+                  dailyLossLimit={dailyLossLimitEnabled ? dailyMaxLossDollars : undefined}
+                />
               )}
 
             </div>

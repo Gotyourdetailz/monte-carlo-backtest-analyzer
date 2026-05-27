@@ -108,6 +108,10 @@ export type SimulationResults = {
     avgPctUnderwater: number;
   };
   garchFit?: import('./garch').GarchParams;
+  modelValidation?: import('./modelValidation').ModelValidationReport;
+  evt?: import('./evt').EVTReport;
+  attribution?: import('./benchmarkAttribution').AttributionReport;
+  timestampAnalytics?: import('./timestampAnalytics').TimestampAnalyticsReport;
 };
 
 export type DailyData = {
@@ -115,6 +119,10 @@ export type DailyData = {
   regime?: string;
   /** Portfolio correlation-regime bucket (in_regime / clustered / …) */
   segment?: string;
+  /** Optional ISO timestamp string for calendar-aware analytics */
+  timestamp?: string;
+  /** Optional benchmark per-period return (decimal or %) for attribution */
+  benchmarkReturn?: number;
 };
 
 export type MetricsValidity = {

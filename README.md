@@ -23,6 +23,10 @@ Open http://localhost:3000
 | **Empirical due-diligence stats** | Win rate, Sharpe/Sortino (correct annualization), Kelly, recovery factor |
 | **Prop firm presets** | FTMO, Apex, TopOneFutures — configurable rules |
 | **Run metadata export** | CSV includes run id, seed, model, VaR for audit trails |
+| **Model validation (SR 11-7 style)** | KS / AD goodness-of-fit, Ljung–Box serial-dep, Kupiec POF + Christoffersen independence VaR backtests, PIT calibration |
+| **EVT tail risk** | Hill tail index, peaks-over-threshold GPD via PWM, EVT-VaR/CVaR alongside empirical |
+| **Benchmark attribution** | Alpha/beta with HC0 robust SE, R², tracking error, information ratio, up/down capture |
+| **Calendar-aware analytics** | Daily Sharpe, worst day, day-of-week breakdown, max losing-day streak when a timestamp column is provided |
 
 ## Data format
 
@@ -54,11 +58,15 @@ Enable columns in the Portfolio tab, normalize weights to 100%, run with **Absol
 
 ## Roadmap to compete with full institutional stacks
 
-- Block bootstrap for serial correlation
-- Calendar-based daily loss limits (timestamp column)
-- PDF investor / risk memos
-- Multi-strategy portfolios and correlation
+- ~~Block bootstrap for serial correlation~~ (shipped)
+- ~~Calendar-based daily loss limits (timestamp column)~~ (historical aggregates shipped; engine-level enforcement pending wasm rebuild)
+- ~~PDF investor / risk memos~~ (shipped via vector PDF export)
+- ~~Multi-strategy portfolios and correlation~~ (shipped)
+- ~~Model-risk validation report (SR 11-7 style)~~ (shipped)
+- ~~EVT loss-tail analysis~~ (shipped)
+- ~~Benchmark / factor attribution~~ (shipped)
 - Server-side batch runs with role-based access
+- Persisted run history with audit trail
 
 ## Disclaimer
 
