@@ -1,6 +1,6 @@
 import React, { useState, useRef, useMemo } from 'react';
 import Papa from 'papaparse';
-import { Upload, BarChart3, AlertTriangle, CheckCircle2, Download, X } from 'lucide-react';
+import { Upload, AlertTriangle, CheckCircle2, Download, X } from 'lucide-react';
 import { previewHistoricalStats } from './simulationEngine';
 import {
   DailyData,
@@ -26,6 +26,7 @@ import { TimestampAnalyticsPanel } from './components/TimestampAnalyticsPanel';
 import { WalkForwardPanel } from './components/WalkForwardPanel';
 import { MultiFactorPanel } from './components/MultiFactorPanel';
 import { RunHistoryPanel } from './components/RunHistoryPanel';
+import { EmptyHero } from './components/EmptyHero';
 import { hashSeries, recordRun } from './runHistory';
 import SimWorker from './simulationWorker?worker';
 import { exportToVectorPDF } from './reportGenerator';
@@ -632,7 +633,7 @@ export default function App() {
       {/* Sidebar */}
       <aside className={`w-[280px] bg-[var(--bg-secondary)] border-r flex flex-col p-5 overflow-y-auto shrink-0 z-10 custom-scrollbar transition-all duration-500 ${isLoading ? 'border-[var(--accent-blue)]/50 shadow-[var(--glow-blue)]' : 'border-[var(--border)]'}`}>
         <div className="flex items-center gap-3 mb-8 mt-2">
-          <div className="w-8 h-8 bg-gradient-to-br from-[var(--accent-green)] to-[#238636] rounded-lg flex items-center justify-center font-bold text-white text-xs shadow-lg shadow-[#238636]/30">MC</div>
+          <div className="brand-mark w-8 h-8 bg-gradient-to-br from-[var(--accent-green)] to-[#238636] rounded-lg flex items-center justify-center font-bold text-white text-xs shadow-lg">MC</div>
           <h1 className="text-lg font-semibold tracking-tight gradient-text">MC Risk Desk</h1>
           <button
             type="button"
@@ -663,7 +664,7 @@ export default function App() {
           {/* File Upload section */}
           <div>
             <label className="text-[10px] uppercase tracking-wider text-[#8b949e] font-bold mb-2 block">Data Input</label>
-            <label className="border-2 border-dashed border-[#30363d] rounded-lg p-4 text-center cursor-pointer hover:border-[#58a6ff] transition-colors flex flex-col items-center justify-center w-full bg-transparent">
+            <label className="file-drop border-2 border-dashed border-[#30363d] rounded-lg p-4 text-center cursor-pointer flex flex-col items-center justify-center w-full">
               <Upload className="w-4 h-4 text-[#8b949e] mb-1" />
               <span className="text-xs text-[#8b949e]">Drop CSV or Excel here</span>
               <input type="file" accept=".csv" className="hidden" onChange={handleFileUpload} />
@@ -683,7 +684,7 @@ export default function App() {
             )}
           </div>
 
-          <div className="h-px bg-[#30363d]" />
+          <div className="divider-gradient" />
 
           {/* Column Mapping */}
           <div className="space-y-4">
@@ -927,7 +928,7 @@ export default function App() {
             )}
           </div>
 
-          <div className="h-px bg-[#30363d]" />
+          <div className="divider-gradient" />
 
           {/* Simulation Settings */}
           <div className="space-y-4">
@@ -1103,7 +1104,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="h-px bg-[#30363d]" />
+          <div className="divider-gradient" />
 
           {/* Prop Firm Eval Settings — single-strategy modes only */}
           {activeTab !== 'portfolio' && (
@@ -1281,42 +1282,26 @@ export default function App() {
         <header className="px-8 mt-6">
            {/* Model Selector Tabs */}
            <div className="flex justify-between items-end border-b border-[#30363d] w-full pb-0">
-             <div className="flex gap-6">
-              <button 
-                onClick={() => setActiveTab('basic')}
-                className={`text-sm font-semibold pb-3 -mb-px transition-all duration-200 cursor-pointer ${activeTab === 'basic' ? 'text-[#58a6ff] border-b-2 border-[#58a6ff]' : 'text-[#8b949e] hover:text-[#c9d1d9]'}`}
-                style={activeTab === 'basic' ? {textShadow: '0 0 12px rgba(88,166,255,0.5)'} : {}}
-              >
-                Trade Sequence MC
-              </button>
-              <button 
-                onClick={() => setActiveTab('regime')}
-                className={`text-sm font-semibold pb-3 -mb-px transition-all duration-200 cursor-pointer ${activeTab === 'regime' ? 'text-[#58a6ff] border-b-2 border-[#58a6ff]' : 'text-[#8b949e] hover:text-[#c9d1d9]'}`}
-                style={activeTab === 'regime' ? {textShadow: '0 0 12px rgba(88,166,255,0.5)'} : {}}
-              >
-                Regime-Switching
-              </button>
-              <button 
-                onClick={() => setActiveTab('parametric')}
-                className={`text-sm font-semibold pb-3 -mb-px transition-all duration-200 cursor-pointer ${activeTab === 'parametric' ? 'text-[#58a6ff] border-b-2 border-[#58a6ff]' : 'text-[#8b949e] hover:text-[#c9d1d9]'}`}
-                style={activeTab === 'parametric' ? {textShadow: '0 0 12px rgba(88,166,255,0.5)'} : {}}
-              >
-                Parametric (Student-t)
-              </button>
-              <button 
-                onClick={() => setActiveTab('portfolio')}
-                className={`text-sm font-semibold pb-3 -mb-px transition-all duration-200 cursor-pointer ${activeTab === 'portfolio' ? 'text-[var(--accent-blue)] border-b-2 border-[var(--accent-blue)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
-                style={activeTab === 'portfolio' ? {textShadow: '0 0 12px rgba(88,166,255,0.5)'} : {}}
-              >
-                Multi-Strategy Portfolio
-              </button>
-              <button 
-                onClick={() => setActiveTab('garch')}
-                className={`text-sm font-semibold pb-3 -mb-px transition-all duration-200 cursor-pointer ${activeTab === 'garch' ? 'text-[var(--accent-blue)] border-b-2 border-[var(--accent-blue)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
-                style={activeTab === 'garch' ? {textShadow: '0 0 12px rgba(88,166,255,0.5)'} : {}}
-              >
-                GARCH(1,1)
-              </button>
+             <div className="tab-row pb-3">
+              {(
+                [
+                  ['basic', 'Trade Sequence MC'],
+                  ['regime', 'Regime-Switching'],
+                  ['parametric', 'Parametric (Student-t)'],
+                  ['portfolio', 'Multi-Strategy Portfolio'],
+                  ['garch', 'GARCH(1,1)'],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setActiveTab(key as typeof activeTab)}
+                  data-active={activeTab === key}
+                  className="tab-btn"
+                >
+                  {label}
+                </button>
+              ))}
              </div>
              {results && (
                <div className="flex flex-col gap-2">
@@ -1340,16 +1325,9 @@ export default function App() {
            </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar results-backdrop">
           {!results && !isLoading ? (
-            <div className="h-full flex flex-col items-center justify-center text-slate-400 opacity-50">
-              <BarChart3 className="w-16 h-16 mb-4 opacity-50" />
-              <p className="font-medium text-center max-w-md">
-                {activeTab === 'portfolio'
-                  ? 'Upload a CSV with one numeric PnL column per strategy (rows aligned by trade index)'
-                  : 'Upload a structural backtest and run the simulation'}
-              </p>
-            </div>
+            <EmptyHero hasFile={csvData.length > 0} isPortfolio={activeTab === 'portfolio'} />
           ) : results ? (
             <div id="report-container" className="space-y-6">
 
