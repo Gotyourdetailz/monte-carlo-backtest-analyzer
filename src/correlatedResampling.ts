@@ -1,4 +1,5 @@
 import { randomNormal, randomChiSquare } from './mathUtils';
+import { logGamma } from './distributionFitting';
 
 /** Standard normal CDF (Abramowitz & Stegun approximation) */
 export function normalCdf(x: number): number {
@@ -73,28 +74,112 @@ export function drawCorrelatedNormals(
 }
 
 /**
- * Student-t CDF approximation (Hill 1970 / regularized beta).
- * Sufficient precision for copula rank mapping.
+ * Student-t CDF via the regularized incomplete beta function.
+ *
+ * For t ≥ 0:  F(t; ν) = 1 - 0.5·I(ν/(ν+t²); ν/2, 1/2)
+ * For t < 0:  F(t; ν) = 1 - F(-t; ν)   (symmetry)
+ *
+ * The regularized incomplete beta `I(x; a, b)` is evaluated via the standard
+ * Numerical Recipes continued-fraction expansion (modified Lentz method),
+ * with `logGamma` from `distributionFitting.ts` for the normalization.
+ *
+ * Guards:
+ *  - non-finite `x` returns `0.5`
+ *  - `df ≤ 0` returns `0.5` (degenerate input)
+ *  - the result is always finite and clamped to `[0, 1]` (no `NaN`)
+ *
+ * Reference values (within ~1e-4):
+ *   studentTCdf(2.571, 5)  ≈ 0.975
+ *   studentTCdf(2.228, 10) ≈ 0.975
+ *   studentTCdf(3.078, 1)  ≈ 0.90
  */
 export function studentTCdf(x: number, df: number): number {
-  if (df <= 0) return 0.5;
+  if (!Number.isFinite(x)) return 0.5;
+  if (!Number.isFinite(df) || df <= 0) return 0.5;
+  if (x === 0) return 0.5;
+
+  // Symmetry: handle the negative tail via the positive one.
+  if (x < 0) return 1 - studentTCdf(-x, df);
+
+  // x > 0 from here.
   const t2 = x * x;
-  const y = t2 / df;
-  // Use relationship to regularized incomplete beta function
-  // P(X <= x) = 0.5 + 0.5 * sign(x) * I(df/(df+t²), df/2, 1/2)
-  // For a fast approximation, use the normal approximation corrected for df:
-  const g1 = 1 / df;
-  const g3 = g1 * g1 * g1;
-  // Cornish-Fisher expansion for t → z
-  const z =
-    x *
-    (1 -
-      g1 / 4 +
-      ((7 * g1 * g1) / 32 - g3 * 3) / 8 +
-      (x * x * g1 * (-1 / 4 + g1 * 11 / 32)) / (1 + y));
-  // Fallback: simple normal CDF of adjusted z
-  const adjusted = x * Math.sqrt((df - 2) / df) * (1 + 1 / (4 * df));
-  return normalCdf(adjusted);
+  const z = df / (df + t2);          // ∈ (0, 1)
+  const ix = regularizedIncompleteBeta(z, df / 2, 0.5);
+  const cdf = 1 - 0.5 * ix;
+  // Defensive clamp: continued-fraction roundoff can land slightly outside [0,1].
+  if (!Number.isFinite(cdf)) return 0.5;
+  if (cdf < 0) return 0;
+  if (cdf > 1) return 1;
+  return cdf;
+}
+
+/**
+ * Regularized incomplete beta function `I(x; a, b)`.
+ *
+ * Uses the continued-fraction representation
+ *   I(x; a, b) = x^a (1-x)^b / (a · B(a,b)) · CF(x; a, b)
+ * with the symmetry trick `I(x; a, b) = 1 - I(1-x; b, a)` applied when
+ * `x > (a+1)/(a+b+2)` so the continued fraction always converges quickly.
+ *
+ * Reference: Numerical Recipes §6.4 (`betai` / `betacf`).
+ */
+function regularizedIncompleteBeta(x: number, a: number, b: number): number {
+  if (!Number.isFinite(x) || x <= 0) return 0;
+  if (x >= 1) return 1;
+
+  const lnBeta = logGamma(a) + logGamma(b) - logGamma(a + b);
+  const front = Math.exp(a * Math.log(x) + b * Math.log(1 - x) - lnBeta);
+
+  if (x < (a + 1) / (a + b + 2)) {
+    return (front * betaContinuedFraction(x, a, b)) / a;
+  }
+  return 1 - (front * betaContinuedFraction(1 - x, b, a)) / b;
+}
+
+/**
+ * Modified Lentz's method continued fraction for `I(x; a, b)`.
+ * Returns the value of the continued fraction `CF(x; a, b)`.
+ */
+function betaContinuedFraction(x: number, a: number, b: number): number {
+  const MAX_ITER = 200;
+  const EPS = 3e-12;
+  const FPMIN = 1e-300;
+
+  const qab = a + b;
+  const qap = a + 1;
+  const qam = a - 1;
+
+  let c = 1;
+  let d = 1 - (qab * x) / qap;
+  if (Math.abs(d) < FPMIN) d = FPMIN;
+  d = 1 / d;
+  let h = d;
+
+  for (let m = 1; m <= MAX_ITER; m++) {
+    const m2 = 2 * m;
+
+    // Even step
+    let aa = (m * (b - m) * x) / ((qam + m2) * (a + m2));
+    d = 1 + aa * d;
+    if (Math.abs(d) < FPMIN) d = FPMIN;
+    c = 1 + aa / c;
+    if (Math.abs(c) < FPMIN) c = FPMIN;
+    d = 1 / d;
+    h *= d * c;
+
+    // Odd step
+    aa = -((a + m) * (qab + m) * x) / ((a + m2) * (qap + m2));
+    d = 1 + aa * d;
+    if (Math.abs(d) < FPMIN) d = FPMIN;
+    c = 1 + aa / c;
+    if (Math.abs(c) < FPMIN) c = FPMIN;
+    d = 1 / d;
+    const del = d * c;
+    h *= del;
+
+    if (Math.abs(del - 1) < EPS) return h;
+  }
+  return h;
 }
 
 /**

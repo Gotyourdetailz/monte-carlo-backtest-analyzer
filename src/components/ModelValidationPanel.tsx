@@ -4,6 +4,7 @@ import type {
   ModelValidationReport,
   TestVerdict,
 } from '../modelValidation';
+import { cn } from '../lib/utils';
 
 type Props = {
   validation: ModelValidationReport;
@@ -41,7 +42,7 @@ function fmtNum(v?: number, d = 2): string {
 function VerdictBadge({ v }: { v: TestVerdict }) {
   const s = VERDICT_STYLE[v];
   return (
-    <span className={`badge ${s.badge} inline-flex items-center gap-1`}>
+    <span className={cn('badge inline-flex items-center gap-1', s.badge)}>
       {s.icon}
       {s.label}
     </span>
@@ -54,12 +55,12 @@ export function ModelValidationPanel({ validation }: Props) {
 
   return (
     <div className="glass-card panel-enter overflow-hidden">
-      <div className="px-6 py-4 border-b border-[#30363d]/50 flex items-center justify-between flex-wrap gap-2">
+      <div className="px-6 py-4 border-b border-[var(--border)]/50 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <span className="text-[10px] text-[var(--accent-blue)] uppercase font-bold tracking-wider">
             Model Validation (SR 11-7 style)
           </span>
-          <span className={overallVerdict === 'fail' ? 'verdict-fail-pulse' : ''}>
+          <span className={cn(overallVerdict === 'fail' && 'verdict-fail-pulse')}>
             <VerdictBadge v={overallVerdict} />
           </span>
         </div>
@@ -157,7 +158,7 @@ function Block({
   rows: { k: string; v: string }[];
 }) {
   return (
-    <div className="border border-[#30363d]/60 rounded-lg p-4">
+    <div className="border border-[var(--border)]/60 rounded-lg p-4">
       <div className="flex items-center justify-between gap-2 mb-2">
         <span className="text-xs text-[var(--text-primary)] font-semibold">{title}</span>
         <VerdictBadge v={verdict} />

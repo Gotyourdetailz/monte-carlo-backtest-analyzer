@@ -1,4 +1,5 @@
 import { PositionSizingRecommendation } from '../types';
+import { cn } from '../lib/utils';
 
 type Props = {
   recommendation: PositionSizingRecommendation;
@@ -13,8 +14,8 @@ export function PositionSizingPanel({ recommendation, startingCapital }: Props) 
   const isOptimal = r.recommendedScale >= 0.9 && r.recommendedScale <= 1.1;
 
   return (
-    <div className={`glass-card animate-fade-in-up overflow-hidden ${isOptimal ? 'glow-border-green' : ''}`}>
-      <div className="px-6 py-4 border-b border-[#30363d]/50">
+    <div className={cn('glass-card animate-fade-in-up overflow-hidden', isOptimal && 'glow-border-green')}>
+      <div className="px-6 py-4 border-b border-[var(--border)]/50">
         <span className="text-[10px] text-[var(--accent-green)] uppercase font-bold tracking-wider">
           Position sizing guardrails (parametric)
         </span>
@@ -23,7 +24,7 @@ export function PositionSizingPanel({ recommendation, startingCapital }: Props) 
         <div className="flex flex-wrap gap-6 items-baseline">
           <div>
             <div className="text-[10px] text-[var(--text-secondary)] uppercase mb-1">Recommended scale</div>
-            <div className={`text-3xl metric-value animate-count-up ${isOptimal ? 'gradient-text-green' : 'text-[var(--accent-amber)]'}`}>{pct}%</div>
+            <div className={cn('text-3xl metric-value animate-count-up', isOptimal ? 'gradient-text-green' : 'text-[var(--accent-amber)]')}>{pct}%</div>
           </div>
           <div>
             <div className="text-[10px] text-[var(--text-secondary)] uppercase mb-1">At 100% (baseline)</div>

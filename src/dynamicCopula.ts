@@ -68,7 +68,8 @@ export function buildDynamicCopulaModel(
 
   // Calculate regime-specific correlation matrices
   const choleskyLByRegime: Record<string, number[][]> = {};
-  
+  const fallbackRegimes: string[] = [];
+
   regimes.forEach(regime => {
     // Extract rows for this regime
     const indices = [];
@@ -77,13 +78,14 @@ export function buildDynamicCopulaModel(
     }
     
     // If a regime has fewer than 2 rows, we can't build a correlation matrix.
-    // Fall back to identity matrix
+    // Fall back to identity matrix and record the regime so the UI can warn.
     if (indices.length < 2) {
       const k = alignedPnls.length;
       const identity = Array.from({ length: k }, (_, i) =>
         Array.from({ length: k }, (_, j) => (i === j ? 1 : 0))
       );
       choleskyLByRegime[regime] = choleskyLower(identity)!;
+      fallbackRegimes.push(regime);
       return;
     }
     
@@ -93,12 +95,13 @@ export function buildDynamicCopulaModel(
     const psdCorr = ensurePsdCorrelation(corr);
     const L = choleskyLower(psdCorr);
     if (!L) {
-      // Fallback if numerical issues persist
+      // Fallback if numerical issues persist — identity + record the regime
       const k = alignedPnls.length;
       const identity = Array.from({ length: k }, (_, i) =>
         Array.from({ length: k }, (_, j) => (i === j ? 1 : 0))
       );
       choleskyLByRegime[regime] = choleskyLower(identity)!;
+      fallbackRegimes.push(regime);
     } else {
       choleskyLByRegime[regime] = L;
     }
@@ -108,7 +111,8 @@ export function buildDynamicCopulaModel(
     regimes,
     choleskyLByRegime,
     transitionMatrix,
-    initialProbabilities
+    initialProbabilities,
+    fallbackRegimes,
   };
 }
 

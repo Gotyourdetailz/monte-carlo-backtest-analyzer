@@ -1,4 +1,6 @@
-import { Upload, ShieldCheck, Activity, BarChart3, Sparkles } from 'lucide-react';
+import { Upload, Trophy, Target, LineChart, ShieldAlert } from 'lucide-react';
+import { cn } from '../lib/utils';
+import { EARLY_ACCESS_URL, isEarlyAccessEnabled, trackEvent } from '../config';
 
 type Props = {
   hasFile: boolean;
@@ -7,68 +9,74 @@ type Props = {
 
 const FEATURES = [
   {
-    icon: ShieldCheck,
-    title: 'SR 11-7 Validation',
-    body: 'KS, Anderson-Darling, Ljung-Box, Kupiec, Christoffersen, PIT — every diagnostic a model-risk validator asks for.',
-    accent: 'green',
-  },
-  {
-    icon: Activity,
-    title: 'Walk-Forward & EVT',
-    body: 'Out-of-sample scoring on a 70/30 holdout. Hill α + GPD tail extrapolation past the worst observed loss.',
+    icon: Target,
+    title: 'Pass probability',
+    body: 'Monte-Carlo your own trade tape through thousands of simulated challenges — see your odds of hitting target before max drawdown trips you out.',
     accent: 'blue',
   },
   {
-    icon: BarChart3,
-    title: 'Multi-Factor Attribution',
-    body: 'Fama-French style regression with HC0 robust SEs. Per-factor t-stats, p-values, and residual volatility.',
-    accent: 'purple',
+    icon: LineChart,
+    title: 'Edge reality check',
+    body: 'A walk-forward out-of-sample test on a 70/30 holdout answers the only question that matters: is your edge real, or did your backtest just get lucky?',
+    accent: 'magenta',
+  },
+  {
+    icon: ShieldAlert,
+    title: 'Tail & ruin risk',
+    body: 'EVT tail extrapolation and probability-of-ruin show how bad an unseen losing streak could really get — beyond your worst historical day.',
+    accent: 'amber',
   },
 ];
 
-const ACCENT: Record<string, { glow: string; border: string; text: string }> = {
-  green:  { glow: 'shadow-[0_0_30px_rgba(63,185,80,0.18)]',  border: 'border-[rgba(63,185,80,0.25)]',  text: 'text-[var(--accent-green)]' },
-  blue:   { glow: 'shadow-[0_0_30px_rgba(88,166,255,0.18)]', border: 'border-[rgba(88,166,255,0.25)]', text: 'text-[var(--accent-blue)]' },
-  purple: { glow: 'shadow-[0_0_30px_rgba(210,168,255,0.18)]', border: 'border-[rgba(210,168,255,0.25)]', text: 'text-[var(--accent-purple)]' },
+const ACCENT: Record<string, { border: string; text: string }> = {
+  blue:    { border: 'border-[rgba(88,166,255,0.30)]',  text: 'text-[var(--accent-blue)]' },
+  magenta: { border: 'border-[rgba(232,121,249,0.35)]', text: 'text-[var(--accent-magenta)]' },
+  amber:   { border: 'border-[rgba(210,153,34,0.30)]',  text: 'text-[var(--accent-amber)]' },
 };
 
 export function EmptyHero({ hasFile, isPortfolio }: Props) {
   return (
     <div className="relative min-h-[80vh] flex flex-col items-center justify-center px-6 overflow-hidden">
-      {/* Animated gradient orbs */}
-      <div className="hero-orbs" aria-hidden="true">
-        <span className="hero-orb hero-orb-blue" />
-        <span className="hero-orb hero-orb-green" />
-        <span className="hero-orb hero-orb-purple" />
-      </div>
-
-      {/* Subtle dotted grid */}
-      <div className="hero-grid" aria-hidden="true" />
-
       <div className="relative z-10 flex flex-col items-center text-center max-w-3xl">
         <div className="badge badge-blue panel-enter panel-enter-1 inline-flex items-center gap-1.5 mb-6">
-          <Sparkles className="w-3 h-3" />
-          INSTITUTIONAL-GRADE MONTE CARLO
+          <Trophy className="w-3 h-3" />
+          FOR FUNDED & PROP-CHALLENGE TRADERS
         </div>
 
-        <h1 className="panel-enter panel-enter-2 text-4xl sm:text-5xl font-semibold tracking-tight mb-4 leading-tight">
-          <span className="gradient-text">Risk diagnostics</span>
-          <span className="text-[var(--text-primary)]"> for trading backtests</span>
+        <h1 className="panel-enter panel-enter-2 font-display text-4xl sm:text-5xl font-semibold tracking-tight mb-4 leading-tight">
+          <span className="gradient-text">Will you pass</span>
+          <span className="text-[var(--text-primary)]"> your prop challenge?</span>
         </h1>
 
         <p className="panel-enter panel-enter-3 text-base text-[var(--text-secondary)] max-w-2xl mb-8 leading-relaxed">
+          And is your edge real — or just luck? Upload your trade tape and find out.
           {hasFile
             ? isPortfolio
-              ? 'Configure your sleeves and weights, then run the simulation to see correlated portfolio paths, EVT tails, and walk-forward validation.'
-              : 'Configure simulation settings in the sidebar, then run to see VaR/CVaR, model validation, EVT loss-tail, walk-forward OOS scoring, and multi-factor attribution.'
+              ? ' Configure your sleeves and weights, then run to see correlated portfolio paths, EVT tails, and walk-forward validation.'
+              : ' Configure simulation settings in the sidebar, then run to see VaR/CVaR, model validation, EVT loss-tail, walk-forward OOS scoring, and multi-factor attribution.'
             : isPortfolio
-              ? 'Upload a CSV with one numeric PnL column per strategy (rows aligned by trade index).'
-              : 'Upload a backtest CSV with a numeric PnL column to begin.'}
+              ? ' Drop in a CSV with one numeric PnL column per strategy (rows aligned by trade index).'
+              : ''}
         </p>
 
-        <div className="panel-enter panel-enter-4 flex items-center gap-3 mb-12 text-xs text-[var(--text-secondary)]">
-          <Upload className="w-4 h-4 text-[var(--accent-blue)]" />
-          <span>Drop your CSV in the sidebar or click the upload area</span>
+        <div className="panel-enter panel-enter-4 flex flex-col items-center gap-4 mb-12">
+          <div className="flex items-center gap-3 text-xs text-[var(--text-secondary)]">
+            <Upload className="w-4 h-4 text-[var(--accent-blue)]" />
+            <span>Drop your CSV in the sidebar or click the upload area</span>
+          </div>
+
+          {isEarlyAccessEnabled && (
+            <a
+              href={EARLY_ACCESS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackEvent('reserve_click', { source: 'hero' })}
+              className="panel-enter panel-enter-4 inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white"
+              style={{ background: 'var(--gradient-brand)' }}
+            >
+              Reserve early access →
+            </a>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
@@ -78,9 +86,13 @@ export function EmptyHero({ hasFile, isPortfolio }: Props) {
             return (
               <div
                 key={f.title}
-                className={`glass-card lift-on-hover panel-enter panel-enter-${5 + i} p-5 text-left border ${a.border} ${a.glow}`}
+                className={cn(
+                  'glass-card lift-on-hover panel-enter p-5 text-left border',
+                  `panel-enter-${5 + i}`,
+                  a.border,
+                )}
               >
-                <Icon className={`w-5 h-5 mb-3 ${a.text}`} />
+                <Icon className={cn('w-5 h-5 mb-3', a.text)} />
                 <div className="text-sm font-semibold text-[var(--text-primary)] mb-1.5">{f.title}</div>
                 <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">{f.body}</p>
               </div>

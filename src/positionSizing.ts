@@ -59,7 +59,11 @@ async function metricsAtScale(
     autoRegimeThreshold: 50,
     slippageModel: 'none',
     impactCoefficient: 0.1,
-    copulaDf: 5,
+    // Internal scale-search runs skip the validation, EVT, attribution,
+    // timestamp, walk-forward, and multi-factor blocks (Requirement 14.2 —
+    // F-SD-14). The headline run dispatched from `App.tsx` defaults to
+    // `false` and continues to compute the full analytics suite.
+    skipPostSimAnalytics: true,
   });
 
   const pnls = result.finalBalances.map((b) => b - params.startingCapital);

@@ -79,3 +79,84 @@ export function calculateMaxDrawdown(equity: number[]): number {
   }
   return maxDd;
 }
+
+/**
+ * Generate a collision-resistant run identifier.
+ *
+ * Replaces the previous `Date.now()`-based scheme that could collide for
+ * sub-runs dispatched within the same millisecond (Requirement 9.9).
+ * Uses `crypto.randomUUID()` when available (browsers, Node 19+) and
+ * falls back to a `Math.random()`-derived suffix for hosts without the
+ * Web Crypto API (e.g. older test environments). The fallback is not
+ * cryptographically strong but is sufficient for run-id uniqueness within
+ * a single audit session.
+ */
+export function generateRunId(prefix: 'run' | 'portfolio'): string {
+  const uuid =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : 'mc-' + Math.random().toString(36).slice(2, 14);
+  return `${prefix}_${uuid}`;
+}
+
+/**
+ * Derive a session-stable 32-bit unsigned seed for engine runs when the
+ * caller has not supplied a fixed seed (`useFixedSeed=false`).
+ *
+ * Requirement 9.3 (F-SD-10): when fixed-seed mode is off, the engine must
+ * still persist the *exact* seed it used on `runMeta.randomSeed` so the
+ * audit log records `null` only in pre-run config — never in a completed
+ * run. This helper produces that seed at run start.
+ *
+ * Uses `crypto.getRandomValues` when available (browsers, Web Workers,
+ * Node 19+) and falls back to a `Math.random()`-derived value for hosts
+ * without the Web Crypto API. The fallback is not cryptographically
+ * strong, but the only consumer is `mulberry32` (TS-side) and Rust's
+ * `StdRng::seed_from_u64` (WASM kernel) — neither requires a CSPRNG seed.
+ *
+ * Returned value is a uint32 in the range `[0, 2^32 - 1]`.
+ */
+export function deriveSessionSeed(): number {
+  if (
+    typeof crypto !== 'undefined' &&
+    typeof crypto.getRandomValues === 'function'
+  ) {
+    const buf = new Uint32Array(1);
+    crypto.getRandomValues(buf);
+    return buf[0] >>> 0;
+  }
+  return Math.floor(Math.random() * 0xffffffff) >>> 0;
+}
+
+/**
+ * 32-bit FNV-1a hash of a UTF-16 code-unit sequence.
+ *
+ * Used to derive deterministic, segment-distinct sub-seeds in
+ * `portfolioEngine.buildPortfolioRegimeBreakdown` so per-regime sub-runs
+ * are reproducible *and* avoid sharing the parent run's PRNG sequence
+ * (Requirement 9.6). FNV-1a is chosen over a cryptographic hash because:
+ *   1. We only need a fast, well-mixed 32-bit avalanche, not collision
+ *      resistance against an adversary.
+ *   2. It is dependency-free and fully synchronous (unlike
+ *      `crypto.subtle.digest`, which is async and overkill here).
+ *
+ * Polynomial constants (per the FNV-1a specification, 32-bit variant):
+ *   - `offset` = `0x811c9dc5` — the FNV offset basis.
+ *   - `prime`  = `0x01000193` — the FNV prime (`2^24 + 2^8 + 0x93`).
+ *
+ * Multiplication uses `Math.imul` to keep the product 32-bit, and every
+ * step is forced unsigned via `>>> 0`. The hash iterates over
+ * `charCodeAt(i)` (UTF-16 code units), which is sufficient for the
+ * ASCII-dominated `RegimeSegmentId` strings used by the engine; callers
+ * that need full Unicode normalization should preprocess accordingly.
+ *
+ * Returned value is a uint32 in the range `[0, 2^32 - 1]`.
+ */
+export function fnv1a32(s: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h >>> 0;
+}

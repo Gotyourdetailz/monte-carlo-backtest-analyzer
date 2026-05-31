@@ -19,12 +19,12 @@ export function HiddenChartCapture({ resultsHistory }: HiddenChartCaptureProps) 
 
         return (
           <div key={`capture-${modelKey}`} id={`capture-${modelKey}`} className="p-8 bg-[#0a0e17] w-[800px] flex flex-col gap-8">
-            <div id={`capture-${modelKey}-spaghetti`} className="w-[800px] h-[400px] bg-[#0d1117] border border-[#30363d] p-4">
+            <div id={`capture-${modelKey}-spaghetti`} className="w-[800px] h-[400px] bg-[var(--bg-secondary)] border border-[var(--border)] p-4">
               <SpaghettiPlot results={results} />
             </div>
             
             <div className="flex gap-4 w-[800px]">
-              <div id={`capture-${modelKey}-dist-balance`} className="w-[390px] h-[300px] bg-[#0d1117] border border-[#30363d] p-4">
+              <div id={`capture-${modelKey}-dist-balance`} className="w-[390px] h-[300px] bg-[var(--bg-secondary)] border border-[var(--border)] p-4">
                 <Histogram 
                   data={results.finalBalances} 
                   color="#238636" 
@@ -32,10 +32,10 @@ export function HiddenChartCapture({ resultsHistory }: HiddenChartCaptureProps) 
                   referenceLine={results.originalPath[results.originalPath.length-1]}
                 />
               </div>
-              <div id={`capture-${modelKey}-dist-dd`} className="w-[390px] h-[300px] bg-[#0d1117] border border-[#30363d] p-4">
+              <div id={`capture-${modelKey}-dist-dd`} className="w-[390px] h-[300px] bg-[var(--bg-secondary)] border border-[var(--border)] p-4">
                 <Histogram 
                   data={results.maxDrawdowns} 
-                  color="#f85149" 
+                  color="var(--accent-red)" 
                   formatter={(val) => `${(val * 100).toFixed(1)}%`}
                   referenceLine={results.originalMaxDrawdown}
                 />

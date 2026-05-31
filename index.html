@@ -3,11 +3,31 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Google AI Studio App</title>
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+        default-src 'self';
+        script-src 'self' 'wasm-unsafe-eval' https://plausible.io;
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' data: blob:;
+        font-src 'self' data:;
+        connect-src 'self' https://plausible.io;
+        worker-src 'self' blob:;
+        object-src 'none';
+        base-uri 'self';
+        frame-ancestors 'none'
+      "
+    />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <title>Monte Carlo Prop-Challenge &amp; Edge Analyzer</title>
+    <meta name="description" content="Will you pass your prop challenge — and is your edge real or just luck? Monte Carlo your own trade tape: pass-probability, walk-forward out-of-sample edge test, EVT tail & ruin risk." />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Will you pass your prop challenge?" />
+    <meta property="og:description" content="Monte Carlo your own trade tape: pass-probability, walk-forward edge reality check, and tail/ruin risk." />
+    <meta name="twitter:card" content="summary_large_image" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

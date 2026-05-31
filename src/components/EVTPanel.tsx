@@ -1,4 +1,6 @@
 import type { EVTReport } from '../evt';
+import { Stat } from './_shared/Stat';
+import { cn } from '../lib/utils';
 
 type Props = {
   evt: EVTReport;
@@ -14,12 +16,12 @@ export function EVTPanel({ evt }: Props) {
 
   return (
     <div className="glass-card panel-enter overflow-hidden">
-      <div className="px-6 py-4 border-b border-[#30363d]/50 flex items-center justify-between flex-wrap gap-2">
+      <div className="px-6 py-4 border-b border-[var(--border)]/50 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <span className="text-[10px] text-[var(--accent-blue)] uppercase font-bold tracking-wider">
             Extreme Value Theory — Loss Tail
           </span>
-          <span className={`badge ${heavyTail ? 'badge-amber' : 'badge-green'}`}>
+          <span className={cn('badge', heavyTail ? 'badge-amber' : 'badge-green')}>
             {heavyTail ? 'Heavy tail' : 'Tail behaved'}
           </span>
         </div>
@@ -52,8 +54,8 @@ export function EVTPanel({ evt }: Props) {
           />
         </div>
 
-        <div className="border border-[#30363d]/60 rounded-lg overflow-hidden">
-          <div className="grid grid-cols-3 text-[10px] uppercase tracking-wider text-[var(--text-secondary)] font-semibold border-b border-[#30363d]/60 px-4 py-2">
+        <div className="border border-[var(--border)]/60 rounded-lg overflow-hidden">
+          <div className="grid grid-cols-3 text-[10px] uppercase tracking-wider text-[var(--text-secondary)] font-semibold border-b border-[var(--border)]/60 px-4 py-2">
             <div>Confidence</div>
             <div>Empirical</div>
             <div>EVT (POT-GPD)</div>
@@ -74,19 +76,9 @@ export function EVTPanel({ evt }: Props) {
   );
 }
 
-function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <div>
-      <div className="text-[10px] uppercase tracking-wider text-[var(--text-secondary)] font-semibold mb-1">{label}</div>
-      <div className="metric-value text-[var(--text-primary)] text-base">{value}</div>
-      {hint && <div className="text-[10px] text-[var(--text-secondary)] opacity-60 mt-0.5">{hint}</div>}
-    </div>
-  );
-}
-
 function Row({ label, emp, ev, last = false }: { label: string; emp: number; ev: number; last?: boolean }) {
   return (
-    <div className={`grid grid-cols-3 px-4 py-2 text-xs ${!last ? 'border-b border-[#30363d]/40' : ''}`}>
+    <div className={cn('grid grid-cols-3 px-4 py-2 text-xs', !last && 'border-b border-[var(--border)]/40')}>
       <div className="text-[var(--text-secondary)]">{label}</div>
       <div className="metric-value text-[var(--accent-red)]">{$fmt(emp)}</div>
       <div className="metric-value text-[var(--accent-amber)]">{$fmt(ev)}</div>

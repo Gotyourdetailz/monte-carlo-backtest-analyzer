@@ -2,6 +2,8 @@ import { CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
 import type { ReactElement } from 'react';
 import type { WalkForwardReport } from '../walkForward';
 import type { TestVerdict } from '../modelValidation';
+import { Stat } from './_shared/Stat';
+import { cn } from '../lib/utils';
 
 type Props = {
   report: WalkForwardReport;
@@ -31,14 +33,17 @@ function fmtNum(v: number, d = 2): string {
 
 export function WalkForwardPanel({ report }: Props) {
   const v = VERDICT_STYLE[report.verdict];
+  // Walk-Forward's `negative` semantically means an OOS *warning* (calibration drift),
+  // not a loss. The shared <Stat> defaults to red for `negative`; we pass
+  // `negativeTone="amber"` so this panel keeps its amber-warning convention.
   return (
     <div className="glass-card panel-enter overflow-hidden">
-      <div className="px-6 py-4 border-b border-[#30363d]/50 flex items-center justify-between flex-wrap gap-2">
+      <div className="px-6 py-4 border-b border-[var(--border)]/50 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <span className="text-[10px] text-[var(--accent-blue)] uppercase font-bold tracking-wider">
             Walk-Forward / Out-of-Sample Validation
           </span>
-          <span className={`badge ${v.badge} inline-flex items-center gap-1`}>
+          <span className={cn('badge inline-flex items-center gap-1', v.badge)}>
             {v.icon}
             {v.label}
           </span>
@@ -55,28 +60,32 @@ export function WalkForwardPanel({ report }: Props) {
             value={fmtPct(report.breachRate, 1)}
             hint={`expected ${fmtPct(report.expectedBreachRate, 1)}`}
             negative={Math.abs(report.breachRate - report.expectedBreachRate) > 0.03}
+            negativeTone="amber"
           />
           <Stat
             label="Kupiec POF p"
             value={fmtP(report.kupiecPValue)}
             hint={`LR = ${fmtNum(report.kupiecLR, 2)}`}
             negative={report.kupiecPValue < 0.05}
+            negativeTone="amber"
           />
           <Stat
             label="PIT chi-square p"
             value={fmtP(report.pitPValue)}
             hint={`χ² = ${fmtNum(report.pitChiSq, 2)}`}
             negative={report.pitPValue < 0.05}
+            negativeTone="amber"
           />
           <Stat
             label="KS train vs OOS p"
             value={fmtP(report.ksPValue)}
             hint={`D = ${fmtNum(report.ksD, 3)}`}
             negative={report.ksPValue < 0.05}
+            negativeTone="amber"
           />
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2 border-t border-[#30363d]/40">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2 border-t border-[var(--border)]/40">
           <Stat label="Train mean" value={`$${report.trainMean.toFixed(0)}`} />
           <Stat label="OOS mean" value={`$${report.oosMean.toFixed(0)}`} />
           <Stat label="Train σ" value={`$${report.trainStd.toFixed(0)}`} />
@@ -85,34 +94,6 @@ export function WalkForwardPanel({ report }: Props) {
 
         <p className="text-[10px] text-[var(--text-secondary)] opacity-80 leading-snug">{report.note}</p>
       </div>
-    </div>
-  );
-}
-
-function Stat({
-  label,
-  value,
-  hint,
-  negative,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  negative?: boolean;
-}) {
-  return (
-    <div>
-      <div className="text-[10px] uppercase tracking-wider text-[var(--text-secondary)] font-semibold mb-1">
-        {label}
-      </div>
-      <div
-        className={`metric-value text-base ${
-          negative ? 'text-[var(--accent-amber)]' : 'text-[var(--text-primary)]'
-        }`}
-      >
-        {value}
-      </div>
-      {hint && <div className="text-[10px] text-[var(--text-secondary)] opacity-60 mt-0.5">{hint}</div>}
     </div>
   );
 }

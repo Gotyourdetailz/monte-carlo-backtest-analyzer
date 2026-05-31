@@ -1,28 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
+@import './theme.css';
 
 /* ═══════════════════════════════════════════════════════════
    Design Tokens
+   ─ Color + density tokens are generated into theme.css from
+     src/theme/tokens.ts (imported above). Do not redefine them here.
    ═══════════════════════════════════════════════════════════ */
-:root {
-  --bg-primary: #0a0e17;
-  --bg-secondary: #0d1117;
-  --bg-card: #161b22;
-  --bg-elevated: #1c2333;
-  --border: #30363d;
-  --border-bright: #58a6ff;
-  --text-primary: #e6edf3;
-  --text-secondary: #8b949e;
-  --accent-blue: #58a6ff;
-  --accent-green: #3fb950;
-  --accent-red: #f85149;
-  --accent-amber: #d29922;
-  --accent-purple: #d2a8ff;
-  --glow-blue: 0 0 20px rgba(88,166,255,0.25);
-  --glow-green: 0 0 20px rgba(63,185,80,0.25);
-  --glow-red: 0 0 20px rgba(248,81,73,0.25);
-  --glow-amber: 0 0 20px rgba(210,153,34,0.25);
-}
 
 /* ═══════════════════════════════════════════════════════════
    Base Styles
@@ -30,7 +13,7 @@
 body {
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -62,36 +45,9 @@ body {
     100% { background-position: 200% 0; }
   }
 
-  @keyframes pulseGlow {
-    0% { box-shadow: 0 0 5px rgba(88,166,255,0.1); }
-    100% { box-shadow: 0 0 20px rgba(88,166,255,0.3); }
-  }
-
-  @keyframes countUp {
-    from { opacity: 0; filter: blur(4px); transform: translateY(4px); }
-    to { opacity: 1; filter: blur(0); transform: translateY(0); }
-  }
-
   @keyframes scaleIn {
     from { opacity: 0; transform: scale(0.95); }
     to { opacity: 1; transform: scale(1); }
-  }
-
-  @keyframes borderGlow {
-    0%, 100% { border-color: rgba(88,166,255,0.3); }
-    33% { border-color: rgba(210,168,255,0.3); }
-    66% { border-color: rgba(63,185,80,0.3); }
-  }
-
-  @keyframes gradientShift {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-  }
-
-  @keyframes livePulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(0.85); }
   }
 
   @keyframes progressBar {
@@ -111,10 +67,7 @@ body {
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
   }
-  .animate-pulse-glow { animation: pulseGlow 2s infinite alternate; }
-  .animate-count-up { animation: countUp 0.5s ease-out both; }
   .animate-scale-in { animation: scaleIn 0.2s ease-out both; }
-  .animate-live-pulse { animation: livePulse 1.5s ease-in-out infinite; }
 
   /* Stagger delays */
   .stagger-1 { animation-delay: 50ms; }
@@ -130,18 +83,15 @@ body {
      Glass & Card Effects
      ═══════════════════════════════════════════════════════════ */
   .glass-card {
-    background: rgba(22,27,34,0.8);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(48,54,61,0.6);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
     border-radius: 16px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.4);
   }
 
   .glass-card-hover {
-    background: rgba(22,27,34,0.8);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(48,54,61,0.6);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
     border-radius: 16px;
     transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
   }
@@ -155,13 +105,17 @@ body {
      Typography
      ═══════════════════════════════════════════════════════════ */
   .metric-value {
-    font-family: 'Fira Code', monospace;
+    font-family: 'JetBrains Mono Variable', ui-monospace, 'Fira Code', monospace;
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.02em;
   }
 
+  .font-display {
+    font-family: 'Manrope Variable', 'Inter Variable', system-ui, sans-serif;
+  }
+
   .gradient-text {
-    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-magenta));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -336,18 +290,6 @@ body {
   .panel-enter-7 { animation-delay: 360ms; }
   .panel-enter-8 { animation-delay: 420ms; }
 
-  /* ─── Verdict pulse for FAIL / WARN ─── */
-  @media (prefers-reduced-motion: no-preference) {
-    @keyframes verdictPulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(248, 81, 73, 0.0); }
-      50%      { box-shadow: 0 0 0 4px rgba(248, 81, 73, 0.18); }
-    }
-  }
-  .verdict-fail-pulse {
-    animation: verdictPulse 2.4s ease-in-out infinite;
-    border-radius: 9999px;
-  }
-
   /* ─── Improved badges: subtle outline + tabular ─── */
   .badge {
     font-variant-numeric: tabular-nums;
@@ -395,58 +337,6 @@ body {
   .sheet-enter    { animation: sheetIn var(--dur-slow) var(--ease-out) both; }
 }
 
-
-/* ═══════════════════════════════════════════════════════════
-   Hero / empty-state ambient
-   ═══════════════════════════════════════════════════════════ */
-.hero-orbs {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-.hero-orb {
-  position: absolute;
-  width: 520px;
-  height: 520px;
-  border-radius: 9999px;
-  filter: blur(110px);
-  opacity: 0.35;
-}
-.hero-orb-blue {
-  background: radial-gradient(circle, rgba(88, 166, 255, 0.65) 0%, transparent 70%);
-  top: -160px;
-  left: -120px;
-}
-.hero-orb-green {
-  background: radial-gradient(circle, rgba(63, 185, 80, 0.55) 0%, transparent 70%);
-  bottom: -180px;
-  right: -100px;
-}
-.hero-orb-purple {
-  background: radial-gradient(circle, rgba(210, 168, 255, 0.5) 0%, transparent 70%);
-  top: 30%;
-  left: 50%;
-  transform: translateX(-50%);
-}
-@media (prefers-reduced-motion: no-preference) {
-  @keyframes orbDrift {
-    0%, 100% { transform: translate(0, 0); }
-    50%      { transform: translate(40px, 30px); }
-  }
-  .hero-orb-blue   { animation: orbDrift 14s ease-in-out infinite; }
-  .hero-orb-green  { animation: orbDrift 18s ease-in-out infinite reverse; }
-  .hero-orb-purple { animation: orbDrift 22s ease-in-out infinite; }
-}
-.hero-grid {
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(rgba(88, 166, 255, 0.08) 1px, transparent 1px);
-  background-size: 28px 28px;
-  mask-image: radial-gradient(circle at center, black 0%, transparent 75%);
-  -webkit-mask-image: radial-gradient(circle at center, black 0%, transparent 75%);
-  pointer-events: none;
-}
 
 /* ═══════════════════════════════════════════════════════════
    Animated tab indicator
@@ -504,17 +394,6 @@ body {
   );
   margin: 1rem 0;
 }
-
-/* ═══════════════════════════════════════════════════════════
-   Brand mark glow loop
-   ═══════════════════════════════════════════════════════════ */
-@media (prefers-reduced-motion: no-preference) {
-  @keyframes brandGlow {
-    0%, 100% { box-shadow: 0 0 16px rgba(63, 185, 80, 0.35); }
-    50%      { box-shadow: 0 0 28px rgba(88, 166, 255, 0.45); }
-  }
-}
-.brand-mark { animation: brandGlow 5s ease-in-out infinite; }
 
 /* ═══════════════════════════════════════════════════════════
    File-drop area: live polish

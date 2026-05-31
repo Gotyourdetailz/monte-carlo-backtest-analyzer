@@ -718,6 +718,50 @@ const PdfDocument = ({ resultsMap, imagesMap, dailyLossLimit }: PdfDocumentProps
   );
 };
 
+/**
+ * Renders an institutional-grade vector PDF report for the selected
+ * simulation models and triggers a browser download.
+ *
+ * Inputs:
+ * - `selectedModels: string[]` — model keys to include (subset of
+ *   `'basic' | 'regime' | 'parametric' | 'portfolio' | 'garch'`,
+ *   matching the `resultsHistory` map). Determines both the chart
+ *   captures performed and the pages emitted.
+ * - `resultsHistory: Record<string, SimulationResults>` — the per-model
+ *   results map from `App.tsx`. Models in `selectedModels` that are
+ *   missing from this map are silently skipped.
+ * - `filename` — output download filename (default
+ *   `'Institutional_Report.pdf'`).
+ * - `dailyLossLimit?` — optional prop-firm daily-loss threshold passed
+ *   through to the timestamp-analytics section for highlight rendering.
+ *
+ * Output:
+ * - Returns `Promise<void>`. The PDF Blob is built via `@react-pdf/renderer`
+ *   and a download is triggered through an injected `<a>` element; the
+ *   resulting blob URL is revoked before resolution.
+ *
+ * Ordering guarantees:
+ * - Pages are emitted in `selectedModels` order.
+ * - Per-model chart captures (`spaghetti`, `dist-balance`, `dist-dd`) are
+ *   read from DOM elements with id `capture-${modelKey}-...` in that
+ *   fixed order so the layout is stable across runs.
+ *
+ * Side effects:
+ * - Reads chart DOM elements via `document.getElementById` and
+ *   rasterizes each through `html2canvas` (any failure is caught and
+ *   logged as a `console.warn`; that model's images degrade to empty
+ *   strings rather than aborting the export).
+ * - Builds the PDF via `@react-pdf/renderer`'s `pdf(...).toBlob()`.
+ * - Mutates the DOM transiently: appends an `<a>` element, calls
+ *   `link.click()`, then removes it and revokes the object URL.
+ * - **Does NOT** read or write IndexedDB. The audit log is owned by
+ *   `runHistory.ts`; this entry point only renders a PDF from results
+ *   already in memory.
+ *
+ * Browser-only: relies on `document`, `URL.createObjectURL`,
+ * `html2canvas`, and `@react-pdf/renderer`. Not safe to call from a
+ * worker or Node context.
+ */
 export async function exportToVectorPDF(
   selectedModels: string[],
   resultsHistory: Record<string, SimulationResults>,

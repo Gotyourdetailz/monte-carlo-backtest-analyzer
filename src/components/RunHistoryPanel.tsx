@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, XCircle, AlertTriangle, Trash2, Download, X, Database } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertTriangle, Trash2, Download, X, Database, ShieldAlert } from 'lucide-react';
 import {
   RunHistoryEntry,
+  REPRO_TOLERANCE,
   compareReproducibility,
   deleteRun,
   exportRunsAsJson,
   listRuns,
 } from '../runHistory';
+import { cn } from '../lib/utils';
 
 type Props = {
   open: boolean;
@@ -43,17 +45,65 @@ function relTime(iso: string): string {
   return `${d}d ago`;
 }
 
+/**
+ * Compute the approximate aggregate JSON-serialized size of `entries` and
+ * format as a human-readable string (KB / MB). Returns `'unknown'` if any
+ * entry fails to serialize (cycles, throws, etc.) so the UI degrades
+ * gracefully rather than breaking the panel.
+ */
+function formatAuditLogSize(entries: RunHistoryEntry[]): string {
+  if (entries.length === 0) return '0 KB';
+  try {
+    let bytes = 0;
+    for (const entry of entries) {
+      bytes += JSON.stringify(entry).length;
+    }
+    if (bytes >= 1024 * 1024) {
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  } catch {
+    return 'unknown';
+  }
+}
+
 const VERDICT_BADGE: Record<string, string> = {
   pass: 'badge badge-green',
   warn: 'badge badge-amber',
   fail: 'badge badge-red',
 };
 
+/**
+ * Two-slot selection used by the reproducibility comparison feature
+ * (Requirement 25.5). A `Set<string>` was previously used here, but its
+ * iteration order made the "replace older selection" semantics implicit;
+ * a tuple captures the order explicitly: index 0 is the older selection,
+ * index 1 the newer.
+ */
+type SelectionTuple = [string?, string?];
+
+function isSelected(sel: SelectionTuple, runId: string): boolean {
+  return sel[0] === runId || sel[1] === runId;
+}
+
+function toggleSelectTuple(sel: SelectionTuple, runId: string): SelectionTuple {
+  // Already selected → deselect, leaving the other (if any) in slot 0.
+  if (sel[0] === runId) return [sel[1], undefined];
+  if (sel[1] === runId) return [sel[0], undefined];
+  // Empty slots → fill in order.
+  if (sel[0] === undefined) return [runId, sel[1]];
+  if (sel[1] === undefined) return [sel[0], runId];
+  // Both slots full → evict the older (slot 0), shift slot 1 down, append new.
+  return [sel[1], runId];
+}
+
 export function RunHistoryPanel({ open, onClose }: Props) {
   const [runs, setRuns] = useState<RunHistoryEntry[]>([]);
   const [filter, setFilter] = useState<'all' | 'basic' | 'regime' | 'parametric' | 'portfolio' | 'garch'>('all');
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useState<SelectionTuple>([undefined, undefined]);
   const [loading, setLoading] = useState(false);
+  const [showExportConfirm, setShowExportConfirm] = useState(false);
+  const [exportPayload, setExportPayload] = useState<{ json: string; size: string; count: number } | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -75,9 +125,13 @@ export function RunHistoryPanel({ open, onClose }: Props) {
     [runs, filter]
   );
 
+  const auditLogSize = useMemo(() => formatAuditLogSize(runs), [runs]);
+
   const reproCompare = useMemo(() => {
-    if (selected.size !== 2) return null;
-    const [a, b] = [...selected].map((id) => runs.find((r) => r.runId === id)).filter(Boolean) as RunHistoryEntry[];
+    const [aId, bId] = selected;
+    if (!aId || !bId) return null;
+    const a = runs.find((r) => r.runId === aId);
+    const b = runs.find((r) => r.runId === bId);
     if (!a || !b) return null;
     return compareReproducibility(a, b);
   }, [selected, runs]);
@@ -85,32 +139,43 @@ export function RunHistoryPanel({ open, onClose }: Props) {
   if (!open) return null;
 
   const toggleSelect = (runId: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(runId)) next.delete(runId);
-      else if (next.size < 2) next.add(runId);
-      else {
-        // replace the older selection with the new one
-        const first = [...next][0];
-        next.delete(first);
-        next.add(runId);
-      }
-      return next;
-    });
+    setSelected((prev) => toggleSelectTuple(prev, runId));
   };
 
   const handleDelete = async (runId: string) => {
     await deleteRun(runId);
     setRuns((prev) => prev.filter((r) => r.runId !== runId));
-    setSelected((prev) => {
-      const next = new Set(prev);
-      next.delete(runId);
-      return next;
-    });
+    setSelected((prev) => [
+      prev[0] === runId ? undefined : prev[0],
+      prev[1] === runId ? undefined : prev[1],
+    ]);
   };
 
   const handleExport = () => {
-    const blob = new Blob([exportRunsAsJson(filtered)], { type: 'application/json' });
+    if (filtered.length === 0) return;
+    const json = exportRunsAsJson(filtered);
+    // Approximate byte size in UTF-8. JSON output is ASCII-heavy, so length is a
+    // reasonable proxy; non-ASCII characters would inflate slightly but are rare
+    // in run-history entries (numeric metrics, run ids, ISO timestamps).
+    const bytes = new Blob([json]).size;
+    let size: string;
+    if (bytes >= 1024 * 1024) {
+      size = `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    } else {
+      size = `${(bytes / 1024).toFixed(1)} KB`;
+    }
+    setExportPayload({ json, size, count: filtered.length });
+    setShowExportConfirm(true);
+  };
+
+  const handleCancelExport = () => {
+    setShowExportConfirm(false);
+    setExportPayload(null);
+  };
+
+  const handleConfirmExport = () => {
+    if (!exportPayload) return;
+    const blob = new Blob([exportPayload.json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -119,6 +184,8 @@ export function RunHistoryPanel({ open, onClose }: Props) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    setShowExportConfirm(false);
+    setExportPayload(null);
   };
 
   return (
@@ -134,7 +201,7 @@ export function RunHistoryPanel({ open, onClose }: Props) {
         className="glass-card sheet-enter w-full max-w-5xl max-h-[85vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="px-6 py-4 border-b border-[#30363d]/60 flex items-center justify-between">
+        <header className="px-6 py-4 border-b border-[var(--border)]/60 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Database className="w-4 h-4 text-[var(--accent-blue)]" />
             <h2 id="run-history-title" className="text-sm font-semibold text-[var(--text-primary)] tracking-wide">
@@ -147,7 +214,7 @@ export function RunHistoryPanel({ open, onClose }: Props) {
               type="button"
               onClick={handleExport}
               disabled={filtered.length === 0}
-              className="btn-press text-xs px-3 py-1.5 rounded-md border border-[#30363d] hover:border-[var(--accent-blue)] hover:bg-[var(--accent-blue)]/10 inline-flex items-center gap-1.5 text-[var(--text-secondary)]"
+              className="btn-press text-xs px-3 py-1.5 rounded-md border border-[var(--border)] hover:border-[var(--accent-blue)] hover:bg-[var(--accent-blue)]/10 inline-flex items-center gap-1.5 text-[var(--text-secondary)]"
             >
               <Download className="w-3.5 h-3.5" /> Export JSON
             </button>
@@ -162,17 +229,23 @@ export function RunHistoryPanel({ open, onClose }: Props) {
           </div>
         </header>
 
-        <div className="px-6 py-3 border-b border-[#30363d]/40 flex items-center gap-2 flex-wrap text-[10px]">
+        <div className="px-6 py-2 border-b border-[var(--border)]/40 flex items-center justify-between gap-4 flex-wrap text-[10px] text-[var(--text-secondary)] opacity-70">
+          <span>Run history is stored locally in your browser, unencrypted.</span>
+          <span className="metric-value">Audit log size: ~{auditLogSize}</span>
+        </div>
+
+        <div className="px-6 py-3 border-b border-[var(--border)]/40 flex items-center gap-2 flex-wrap text-[10px]">
           <span className="text-[var(--text-secondary)] uppercase tracking-wider font-bold">Model</span>
           {(['all', 'basic', 'regime', 'parametric', 'portfolio', 'garch'] as const).map((m) => (
             <button
               key={m}
               onClick={() => setFilter(m)}
-              className={`btn-press px-2.5 py-1 rounded-full uppercase tracking-wider font-bold ${
+              className={cn(
+                'btn-press px-2.5 py-1 rounded-full uppercase tracking-wider font-bold',
                 filter === m
                   ? 'bg-[var(--accent-blue)]/20 text-[var(--accent-blue)] ring-1 ring-[var(--accent-blue)]/40'
-                  : 'text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]'
-              }`}
+                  : 'text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]',
+              )}
             >
               {m}
             </button>
@@ -195,7 +268,7 @@ export function RunHistoryPanel({ open, onClose }: Props) {
             </div>
           ) : (
             <table className="w-full text-xs">
-              <thead className="sticky top-0 bg-[var(--bg-secondary)] border-b border-[#30363d]/60 z-10">
+              <thead className="sticky top-0 bg-[var(--bg-secondary)] border-b border-[var(--border)]/60 z-10">
                 <tr className="text-left text-[10px] uppercase tracking-wider text-[var(--text-secondary)]">
                   <th className="px-3 py-2 w-8"></th>
                   <th className="px-3 py-2">Run</th>
@@ -212,18 +285,19 @@ export function RunHistoryPanel({ open, onClose }: Props) {
               </thead>
               <tbody>
                 {filtered.map((r) => {
-                  const isSelected = selected.has(r.runId);
+                  const rowSelected = isSelected(selected, r.runId);
                   return (
                     <tr
                       key={r.runId}
-                      className={`border-b border-[#30363d]/30 hover:bg-[var(--bg-elevated)]/40 transition-colors ${
-                        isSelected ? 'bg-[var(--accent-blue)]/10' : ''
-                      }`}
+                      className={cn(
+                        'border-b border-[var(--border)]/30 hover:bg-[var(--bg-elevated)]/40 transition-colors',
+                        rowSelected && 'bg-[var(--accent-blue)]/10',
+                      )}
                     >
                       <td className="px-3 py-2">
                         <input
                           type="checkbox"
-                          checked={isSelected}
+                          checked={rowSelected}
                           onChange={() => toggleSelect(r.runId)}
                           className="accent-[var(--accent-blue)]"
                           aria-label={`Select run ${shortId(r.runId)}`}
@@ -250,13 +324,14 @@ export function RunHistoryPanel({ open, onClose }: Props) {
                         {r.summary.terminalPnLValid ? fmtUSD(r.summary.cvar95) : 'N/A'}
                       </td>
                       <td
-                        className={`px-3 py-2 text-right metric-value ${
+                        className={cn(
+                          'px-3 py-2 text-right metric-value',
                           r.summary.ruinProbability > 5
                             ? 'text-[var(--accent-red)]'
                             : r.summary.ruinProbability > 1
                             ? 'text-[var(--accent-amber)]'
-                            : 'text-[var(--accent-green)]'
-                        }`}
+                            : 'text-[var(--accent-green)]',
+                        )}
                       >
                         {fmtPct(r.summary.ruinProbability)}
                       </td>
@@ -295,17 +370,23 @@ export function RunHistoryPanel({ open, onClose }: Props) {
         </div>
 
         {reproCompare && (
-          <div className="px-6 py-3 border-t border-[#30363d]/60 bg-[var(--bg-secondary)]/60">
+          <div className="px-6 py-3 border-t border-[var(--border)]/60 bg-[var(--bg-secondary)]/60">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--text-secondary)]">
                 Reproducibility Check
               </span>
               <span
-                className={`badge ${
-                  reproCompare.reproducible ? 'badge-green' : 'badge-red'
-                }`}
+                className={cn('badge', reproCompare.reproducible ? 'badge-green' : 'badge-red')}
               >
-                {reproCompare.reproducible ? 'Reproducible' : 'Drift detected'}
+                {reproCompare.reproducible ? (
+                  <>
+                    <CheckCircle2 className="w-3 h-3" /> Reproducible
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="w-3 h-3" /> Drift detected
+                  </>
+                )}
               </span>
             </div>
             {reproCompare.deltas.length === 0 ? (
@@ -313,21 +394,112 @@ export function RunHistoryPanel({ open, onClose }: Props) {
                 Inputs differ between selected runs (seed, sampling, data, or sim count). Reproducibility check
                 requires identical inputs.
               </p>
+            ) : reproCompare.reproducible ? (
+              <p className="text-[10px] text-[var(--text-secondary)] opacity-80">
+                All summary metrics agree within numerical tolerance. The two runs are reproducible peers.
+              </p>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-[10px]">
-                {reproCompare.deltas.map((d) => (
-                  <div key={d.field} className="border border-[#30363d]/60 rounded p-2">
-                    <div className="text-[var(--text-secondary)] uppercase tracking-wider">{d.field}</div>
-                    <div className="metric-value text-[var(--text-primary)]">
-                      Δ {d.absDelta.toExponential(2)}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <>
+                <p className="text-[10px] text-[var(--text-secondary)] opacity-80 mb-2">
+                  The following fields exceed the reproducibility tolerance:
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[10px]">
+                  {reproCompare.deltas
+                    .filter((d) =>
+                      d.field === 'prngFamily'
+                        ? true
+                        : d.absDelta >=
+                          REPRO_TOLERANCE * Math.max(1, Math.abs(Number(d.a)))
+                    )
+                    .map((d) => (
+                      <div
+                        key={d.field}
+                        className="border border-[var(--accent-red)]/40 bg-[var(--accent-red)]/10 rounded p-2"
+                      >
+                        <div className="text-[var(--accent-red)] uppercase tracking-wider font-bold">
+                          {d.field}
+                        </div>
+                        <div className="metric-value text-[var(--text-primary)]">
+                          {d.field === 'prngFamily'
+                            ? 'mismatch'
+                            : `Δ ${(d.absDelta as number).toExponential(2)}`}
+                        </div>
+                        <div className="text-[var(--text-secondary)] opacity-80 mt-0.5">
+                          a: {typeof d.a === 'number' ? d.a.toExponential(3) : d.a}
+                        </div>
+                        <div className="text-[var(--text-secondary)] opacity-80">
+                          b: {typeof d.b === 'number' ? d.b.toExponential(3) : d.b}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </>
             )}
           </div>
         )}
       </div>
+
+      {showExportConfirm && exportPayload && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center px-4 backdrop-enter"
+          style={{ background: 'rgba(0,0,0,0.7)' }}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleCancelExport();
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="export-confirm-title"
+        >
+          <div
+            className="glass-card sheet-enter w-full max-w-md flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <header className="px-6 py-4 border-b border-[var(--border)]/60 flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 text-[var(--accent-amber)]" />
+              <h3
+                id="export-confirm-title"
+                className="text-sm font-semibold text-[var(--text-primary)] tracking-wide"
+              >
+                Export Run History
+              </h3>
+            </header>
+
+            <div className="px-6 py-4 space-y-3 text-xs text-[var(--text-primary)]">
+              <p>
+                This file contains your full trade history (PnL series, sleeve weights, factor data) for{' '}
+                <span className="metric-value text-[var(--accent-blue)]">{exportPayload.count}</span>{' '}
+                {exportPayload.count === 1 ? 'run' : 'runs'}, totaling{' '}
+                <span className="metric-value text-[var(--accent-blue)]">~{exportPayload.size}</span>.
+              </p>
+              <div className="border border-[var(--accent-amber)]/40 bg-[var(--accent-amber)]/10 rounded p-3 text-[11px] text-[var(--text-primary)] flex gap-2">
+                <AlertTriangle className="w-4 h-4 text-[var(--accent-amber)] shrink-0 mt-0.5" />
+                <span>
+                  The exported file is unencrypted. Do not share it with anyone you do not trust with your
+                  trading data.
+                </span>
+              </div>
+            </div>
+
+            <footer className="px-6 py-3 border-t border-[var(--border)]/60 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={handleCancelExport}
+                className="btn-press text-xs px-3 py-1.5 rounded-md border border-[var(--border)] hover:border-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] text-[var(--text-secondary)]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmExport}
+                className="btn-press text-xs px-3 py-1.5 rounded-md border border-[var(--accent-blue)] bg-[var(--accent-blue)]/15 hover:bg-[var(--accent-blue)]/25 text-[var(--accent-blue)] inline-flex items-center gap-1.5"
+              >
+                <Download className="w-3.5 h-3.5" /> Download
+              </button>
+            </footer>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
