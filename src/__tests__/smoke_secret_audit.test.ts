@@ -2,8 +2,10 @@
  * Smoke test: assert no historical occurrence of the leaked GEMINI_API_KEY
  * pattern (`AIzaSy...`) in any commit reachable from any ref.
  *
- * Implements the verification command documented in SECURITY.md:
- *   git log --all -S 'AIzaSy'
+ * Implements the verification command documented in SECURITY.md, path-scoped to
+ * exclude this test and SECURITY.md — both of which name the pattern for
+ * documentation, not as a live key:
+ *   git log --all -S 'AIzaSy' -- . ':!SECURITY.md' ':!src/__tests__/smoke_secret_audit.test.ts'
  *
  * Skips gracefully when:
  *   - git is not installed / not on PATH
@@ -68,13 +70,25 @@ try {
 // 2. Search all reachable commits for the leaked-key shape via git log -S.
 //    --oneline keeps output to one line per offending commit so we can count
 //    lines and also surface the offenders if any are found.
+//
+//    The pickaxe is path-scoped to EXCLUDE the two files that legitimately
+//    contain the literal needle as a *pattern, not a key*: this audit test
+//    (its NEEDLE constant) and SECURITY.md (which documents the incident).
+//    Without the excludes, the scanner matches its own detection string once
+//    those files are committed — a self-referential false positive. Every
+//    other path in history is still scanned, so a real key leak is still
+//    caught. The paren-free `:!path` exclude form is double-quoted so the
+//    command parses safely under both cmd.exe and POSIX sh (runs via execSync).
 let logOutput = '';
 try {
-  logOutput = execSync(`git log --all -S "${NEEDLE}" --oneline`, {
-    cwd: REPO_ROOT,
-    stdio: ['ignore', 'pipe', 'pipe'],
-    encoding: 'utf8',
-  });
+  logOutput = execSync(
+    `git log --all -S "${NEEDLE}" --oneline -- . ":!SECURITY.md" ":!src/__tests__/smoke_secret_audit.test.ts"`,
+    {
+      cwd: REPO_ROOT,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      encoding: 'utf8',
+    },
+  );
 } catch (err) {
   // execSync throws when git exits non-zero; in this codepath that's a real
   // failure (we already confirmed we're in a git repo above).

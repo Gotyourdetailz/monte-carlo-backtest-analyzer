@@ -9,9 +9,9 @@
         default-src 'self';
         script-src 'self' 'wasm-unsafe-eval' https://plausible.io;
         style-src 'self' 'unsafe-inline';
-        img-src 'self' data: blob:;
+        img-src 'self' data: blob: https://prod.spline.design;
         font-src 'self' data:;
-        connect-src 'self' https://plausible.io;
+        connect-src 'self' https://plausible.io https://prod.spline.design;
         worker-src 'self' blob:;
         object-src 'none';
         base-uri 'self';

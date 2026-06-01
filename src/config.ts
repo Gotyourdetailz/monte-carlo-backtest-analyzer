@@ -23,6 +23,21 @@ export const EARLY_ACCESS_URL: string = rawEarlyAccessUrl;
 /** True only when a syntactically valid https URL is configured. */
 export const isEarlyAccessEnabled: boolean = /^https:\/\/\S+$/.test(rawEarlyAccessUrl);
 
+/**
+ * Spline 3D hero scene (`.splinecode`) URL for the marketing landing.
+ *
+ * Defaults to a public demo scene so the 3D hero works out of the box —
+ * REPLACE with your own from spline.design (Export → Public web URL) via
+ * `VITE_SPLINE_SCENE_URL`. Set that env var to an empty string to force the
+ * static brand-gradient fallback. The viewer runtime and this scene are only
+ * fetched when the 3D layer will actually render (see `SplineHero` gating:
+ * reduced-motion, slow network, and WebGL availability).
+ */
+const DEMO_SPLINE_SCENE = 'https://prod.spline.design/6Wq1Q7YGyM-iab9i/scene.splinecode';
+export const SPLINE_SCENE_URL: string = (
+  import.meta.env.VITE_SPLINE_SCENE_URL ?? DEMO_SPLINE_SCENE
+).trim();
+
 /** Public analytics domain (Plausible). Blank → analytics disabled. */
 const analyticsDomain = (import.meta.env.VITE_ANALYTICS_DOMAIN ?? '').trim();
 

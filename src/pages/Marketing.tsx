@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { isEarlyAccessEnabled } from '../config';
 import { ThemeToggle } from '../components/ThemeToggle';
+import { SplineHero } from '../components/SplineHero';
 import {
   ACCENT,
   BRAND_GRADIENT,
@@ -90,15 +91,10 @@ export function Marketing(): ReactElement {
           aria-labelledby="hero-heading"
           className="relative overflow-hidden px-6 pb-20 pt-16 sm:pt-24"
         >
-          {/* Ambient brand glow — purely decorative, finite, reduced-motion safe. */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 -z-10"
-            style={{
-              background:
-                'radial-gradient(700px 360px at 80% 0%, rgba(88,166,255,0.08), transparent 60%), radial-gradient(620px 320px at 10% 30%, rgba(232,121,249,0.07), transparent 60%)',
-            }}
-          />
+          {/* 3D hero backdrop (Req 8 / B5). Lazy-loads the Spline scene only when
+              allowed (WebGL, no reduced-motion, fast network); otherwise renders
+              the static brand-gradient glow. Never both. */}
+          <SplineHero />
 
           <div className="mx-auto max-w-3xl text-center">
             <div className="badge badge-blue panel-enter panel-enter-1 mb-6 inline-flex items-center gap-1.5">
