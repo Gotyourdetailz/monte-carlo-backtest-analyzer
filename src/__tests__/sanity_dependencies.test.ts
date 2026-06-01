@@ -7,6 +7,9 @@
  *     optionalDependencies).
  *   - `papaparse`, `@react-pdf/renderer`, `html2canvas` are present in
  *     `dependencies` and pinned to an EXACT version (no `^` or `~` prefix).
+ *   - `three` and `@react-three/fiber` are present in `dependencies` (not
+ *     `devDependencies`) and pinned to an exact `MAJOR.MINOR.PATCH` version
+ *     with no range prefix (webgl-hero task 8.3 / Requirements 12.1).
  *   - `fast-check` is present in `devDependencies`.
  *
  * Run with: npx tsx src/__tests__/sanity_dependencies.test.ts
@@ -41,6 +44,9 @@ const ALL_BUCKETS = [
 
 const REMOVED_DEPS = ['@google/genai', 'dotenv', 'express', 'jspdf'] as const;
 const PINNED_DEPS = ['papaparse', '@react-pdf/renderer', 'html2canvas'] as const;
+// webgl-hero 3D runtime deps: must live in `dependencies` and be pinned to a
+// strict MAJOR.MINOR.PATCH (no prerelease/build/range) per Requirements 12.1.
+const PINNED_3D_DEPS = ['three', '@react-three/fiber'] as const;
 
 let failures = 0;
 
@@ -59,6 +65,12 @@ function isExactVersion(version: string): boolean {
   // Reject npm range prefixes: ^, ~, >, <, =, ||, x/X wildcards, *, blank.
   // Accept a plain semver `MAJOR.MINOR.PATCH` (with optional prerelease/build).
   return /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version);
+}
+
+function isStrictVersion(version: string): boolean {
+  // Strict `MAJOR.MINOR.PATCH` only — no range prefix (^/~/>/<), no wildcard
+  // (*/x/X), and no prerelease/build suffix. Used for the pinned 3D deps.
+  return /^\d+\.\d+\.\d+$/.test(version);
 }
 
 const raw = readFileSync(PACKAGE_JSON_PATH, 'utf-8');
@@ -97,6 +109,33 @@ for (const dep of PINNED_DEPS) {
     assert.ok(
       isExactVersion(version),
       `${dep} version "${version}" is not a plain MAJOR.MINOR.PATCH pin`,
+    );
+  }, pkg.dependencies?.[dep] ?? '<missing>');
+}
+
+// ─── 3D runtime deps (three, @react-three/fiber) must be in `dependencies`,
+//     not `devDependencies`, and pinned to a strict MAJOR.MINOR.PATCH. ────────
+for (const dep of PINNED_3D_DEPS) {
+  check(`dependencies.${dep} is present (not devDependencies) and strictly pinned`, () => {
+    const deps = pkg.dependencies ?? {};
+    const devs = pkg.devDependencies ?? {};
+    assert.ok(dep in deps, `${dep} missing from dependencies`);
+    assert.ok(
+      !(dep in devs),
+      `${dep} must not be declared in devDependencies (it is a runtime dependency)`,
+    );
+    const version = deps[dep];
+    assert.ok(
+      typeof version === 'string' && version.length > 0,
+      `${dep} has no version string`,
+    );
+    assert.ok(
+      !version.startsWith('^') && !version.startsWith('~'),
+      `${dep} has a range prefix: "${version}"`,
+    );
+    assert.ok(
+      isStrictVersion(version),
+      `${dep} version "${version}" is not a strict MAJOR.MINOR.PATCH pin`,
     );
   }, pkg.dependencies?.[dep] ?? '<missing>');
 }

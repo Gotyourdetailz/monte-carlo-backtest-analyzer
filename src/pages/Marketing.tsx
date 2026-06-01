@@ -16,7 +16,7 @@
  * Sections: 1) Top nav  2) Hero  3) What it does  4) How it works
  *           5) Pricing  6) FAQ   7) Footer.
  */
-import { Fragment, type ReactElement } from 'react';
+import { Fragment, useState, type ReactElement } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Trophy,
@@ -29,9 +29,14 @@ import {
   Database,
   FileText,
 } from 'lucide-react';
-import { isEarlyAccessEnabled } from '../config';
+import { isEarlyAccessEnabled, SPLINE_SCENE_URL, HERO_MODE } from '../config';
+import { useTheme } from '../theme/ThemeProvider';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { SplineHero } from '../components/SplineHero';
+import { BrandHero } from '../components/BrandHero';
+import { VideoHero } from '../components/VideoHero';
+import { WebglHero } from '../components/WebglHero';
+import { selectActiveHeroTier } from '../components/heroLadder';
 import {
   ACCENT,
   BRAND_GRADIENT,
@@ -49,7 +54,45 @@ import {
   SectionHeading,
 } from './marketing/components';
 
+/**
+ * Synchronous WebGL capability probe for the Hero_Ladder (Req 3.2 / 3.3).
+ *
+ * `selectActiveHeroTier` is pure and needs to be told whether a WebGL context
+ * can be created so it can pick the WebGL tier or fall through to the
+ * theme-appropriate next tier. (`WebglHero` also has its own internal gate, but
+ * the ladder must decide which component to mount in the first place.) This
+ * creates a throwaway canvas and probes for a context, returning `false` when
+ * the DOM is unavailable (SSR / tests) or the probe throws. Side-effect-free
+ * and decided once per mount via a `useState` initialiser so it is stable
+ * across renders.
+ */
+function detectWebGL(): boolean {
+  if (typeof document === 'undefined') return false;
+  try {
+    const canvas = document.createElement('canvas');
+    return Boolean(
+      canvas.getContext('webgl') ||
+        canvas.getContext('webgl2') ||
+        canvas.getContext('experimental-webgl'),
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function Marketing(): ReactElement {
+  const { resolved } = useTheme();
+  // Probe WebGL availability once (stable across renders) so the pure
+  // Hero_Ladder selector can choose the WebGL tier or fall through (Req 3.2/3.3).
+  const [hasWebGL] = useState(detectWebGL);
+  // Deterministic hero-tier selection from the documented precedence table
+  // (Req 3.1–3.4): WebGL → Video/Brand → Spline → Video/Brand.
+  const heroTier = selectActiveHeroTier({
+    mode: HERO_MODE,
+    hasWebGL,
+    theme: resolved,
+    splineUrl: SPLINE_SCENE_URL,
+  });
   return (
     <div className="min-h-screen overflow-x-hidden bg-[var(--bg-primary)] text-[var(--text-primary)]">
       {/* ── 1. Top nav ── */}
@@ -89,12 +132,31 @@ export function Marketing(): ReactElement {
         {/* ── 2. Hero ── */}
         <section
           aria-labelledby="hero-heading"
-          className="relative overflow-hidden px-6 pb-20 pt-16 sm:pt-24"
+          // `isolate` creates a stacking context so the SplineHero's `-z-10`
+          // backdrop is contained here and paints above the page background —
+          // without it the negative-z layer escapes to the root context and is
+          // hidden behind the `bg-[var(--bg-primary)]` wrapper.
+          className="relative isolate overflow-hidden px-6 pb-20 pt-16 sm:pt-24"
         >
-          {/* 3D hero backdrop (Req 8 / B5). Lazy-loads the Spline scene only when
-              allowed (WebGL, no reduced-motion, fast network); otherwise renders
-              the static brand-gradient glow. Never both. */}
-          <SplineHero />
+          {/* Hero backdrop (Req 8 / B5). Selected by the deterministic
+              Hero_Ladder (`selectActiveHeroTier`, Req 3.1–3.4): the WebGL 3D
+              hero (`VITE_HERO_MODE=webgl` + WebGL available) sits atop a
+              capability ladder that falls through to the looping Monte-Carlo
+              video (dark theme) / the self-hosted brand canvas cloud (light
+              theme); when `VITE_SPLINE_SCENE_URL` is set and Hero_Mode is unset,
+              the Spline 3D scene is used instead. All tiers carry their own
+              static brand-gradient fallback, honour reduced motion, and stay
+              inside this `isolate` slot so the `-z-10` backdrop paints behind
+              the hero text (Req 3.5, 6.1–6.3). */}
+          {heroTier === 'webgl' ? (
+            <WebglHero active />
+          ) : heroTier === 'spline' ? (
+            <SplineHero />
+          ) : heroTier === 'video' ? (
+            <VideoHero />
+          ) : (
+            <BrandHero />
+          )}
 
           <div className="mx-auto max-w-3xl text-center">
             <div className="badge badge-blue panel-enter panel-enter-1 mb-6 inline-flex items-center gap-1.5">

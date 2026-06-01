@@ -23,5 +23,15 @@ scripts/catch_error.cjs
 
 # Editor / agent workspace metadata
 .antigravity/
+.claude/
 .kiro/
+
+# Dropped-in agent skills, codex tooling & review assets — NOT app source
+.agents/
+.codex/
+Assets-review/
+VibeSec-Skill/
+agent-skills/
+bencium-claude-code-design-skill/
+ui-ux-pro-max-skill/
 

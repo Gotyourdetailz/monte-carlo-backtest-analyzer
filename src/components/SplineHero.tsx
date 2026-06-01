@@ -2,16 +2,25 @@
  * SplineHero — the decorative 3D backdrop for the marketing hero (Req 8 / B5).
  *
  * Renders EITHER the Spline scene OR the static brand-gradient fallback — never
- * both. It degrades to the fallback when any of these hold:
+ * both. The soft preference gates (reduced motion, slow network, explicit
+ * opt-in) have been removed: whenever a scene URL is configured the scene is
+ * shown and left animating. It still degrades to the fallback when:
  *   - no scene URL is configured (`SPLINE_SCENE_URL` empty),
- *   - the user prefers reduced motion,
- *   - the connection is slow / data-saver is on (Network Information API < 3G),
- *   - WebGL is unavailable, or
+ *   - WebGL is unavailable (the viewer cannot paint a canvas at all), or
  *   - the viewer runtime / scene fails to load at runtime.
+ *
+ * WebGL is the one remaining gate on purpose: it is a hard rendering capability,
+ * not a preference. Without it the `<spline-viewer>` produces nothing, so the
+ * brand gradient is a strictly better result than a blank box.
  *
  * The heavy `@splinetool/viewer` runtime is loaded with a dynamic `import()`, so
  * it is only fetched when the 3D layer is actually going to render. The layer is
  * purely decorative: `aria-hidden`, `pointer-events-none`, behind the hero text.
+ *
+ * Layering: this renders a `-z-10` backdrop, so it MUST be placed inside an
+ * element that establishes its own stacking context (e.g. a parent with the
+ * `isolate` utility). Otherwise the negative-z layer escapes to the root
+ * stacking context and is painted behind any opaque ancestor background.
  */
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactElement } from 'react';
@@ -32,28 +41,6 @@ const SCRIM_STYLE: CSSProperties = {
     'linear-gradient(180deg, transparent 62%, var(--bg-primary) 100%)',
 };
 
-interface NetworkInformation {
-  effectiveType?: string;
-  saveData?: boolean;
-}
-interface NavigatorWithConnection extends Navigator {
-  connection?: NetworkInformation;
-}
-
-function prefersReducedMotion(): boolean {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
-
-function isSlowNetwork(): boolean {
-  if (typeof navigator === 'undefined') return false;
-  const conn = (navigator as NavigatorWithConnection).connection;
-  if (!conn) return false;
-  if (conn.saveData) return true;
-  const et = conn.effectiveType;
-  return et === 'slow-2g' || et === '2g';
-}
-
 function hasWebGL(): boolean {
   if (typeof document === 'undefined') return false;
   try {
@@ -67,29 +54,11 @@ function hasWebGL(): boolean {
 }
 
 /**
- * Explicit opt-in to preview the 3D even when the reduced-motion / slow-network
- * preference gates would otherwise suppress it. Set via `?hero3d=1` in the URL
- * or `localStorage['mc-hero3d'] = '1'`. Does NOT override hard capability gates
- * (a configured scene + WebGL are still required).
+ * Decide synchronously (before first paint) whether the 3D layer is allowed.
+ * Only hard requirements remain: a scene to load and a GPU to render it.
  */
-function isForced(): boolean {
-  if (typeof window === 'undefined') return false;
-  try {
-    if (new URLSearchParams(window.location.search).has('hero3d')) return true;
-    return window.localStorage?.getItem('mc-hero3d') === '1';
-  } catch {
-    return false;
-  }
-}
-
-/** Decide synchronously (before first paint) whether the 3D layer is allowed. */
 function splineAllowed(): boolean {
-  // Hard requirements: a scene to load and a GPU to render it.
-  if (!SPLINE_SCENE_URL || !hasWebGL()) return false;
-  // Explicit preview opt-in bypasses the accessibility/preference gates only.
-  if (isForced()) return true;
-  // Default (accessible) behaviour: respect reduced-motion and slow networks.
-  return !prefersReducedMotion() && !isSlowNetwork();
+  return Boolean(SPLINE_SCENE_URL) && hasWebGL();
 }
 
 type Phase = 'spline' | 'fallback';
@@ -133,6 +102,7 @@ export function SplineHero(): ReactElement {
     if (!el) return;
     const fail = (): void => setPhase('fallback');
     el.addEventListener('error', fail);
+
     const timer = window.setTimeout(() => {
       const painted = Boolean(el.shadowRoot?.querySelector('canvas') || el.querySelector('canvas'));
       if (!painted) setPhase('fallback');
