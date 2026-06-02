@@ -240,8 +240,7 @@ function ReserveCta(): ReactElement | null {
         target="_blank"
         rel="noopener noreferrer"
         onClick={() => trackEvent('reserve_click', { source: 'verdict' })}
-        className="inline-flex min-h-[44px] items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold text-white"
-        style={{ background: 'var(--gradient-brand)' }}
+        className="inline-flex min-h-[44px] items-center justify-center rounded-lg bg-[var(--accent-mint)] px-4 py-2.5 text-sm font-semibold text-[var(--bg-primary)] transition-colors hover:bg-[var(--accent-mint-bright)]"
       >
         Lock in founding price &rarr;
       </a>
@@ -256,10 +255,7 @@ export function ChallengeVerdict({ results }: ChallengeVerdictProps): ReactEleme
   if (!propEvalStats && !walkForward) return null;
 
   return (
-    <div
-      className="bg-[var(--bg-secondary)] border border-[var(--border)] rounded-2xl overflow-hidden animate-fade-in-up"
-      style={{ borderTop: '2px solid var(--accent-magenta)' }}
-    >
+    <div className="bg-[var(--bg-secondary)] border border-[var(--border)] rounded-2xl overflow-hidden animate-fade-in-up">
       <div className="px-5 md:px-6 py-4 border-b border-[var(--border)]/60 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-[var(--accent-magenta)]" aria-hidden="true" />

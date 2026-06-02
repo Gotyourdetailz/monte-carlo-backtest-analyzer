@@ -55,7 +55,7 @@ export function ThemeToggle(): ReactElement {
                 'text-[var(--text-secondary)] transition-colors',
                 'hover:text-[var(--text-primary)]',
                 active &&
-                  'bg-[var(--bg-card)] text-[var(--accent-blue)] shadow-[inset_0_0_0_1px_rgba(88,166,255,0.35)]',
+                  'bg-[var(--bg-card)] text-[var(--accent-mint)] shadow-[inset_0_0_0_1px_rgba(70,230,200,0.35)]',
               )}
             >
               <Icon className="h-4 w-4" aria-hidden="true" />

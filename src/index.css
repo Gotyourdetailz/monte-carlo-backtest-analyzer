@@ -1,5 +1,9 @@
 @import "tailwindcss";
 @import './theme.css';
+/* Scoped "Bench Instrument" CRT/screen system — all rules live under
+   `.bench-root`, so importing globally exposes the luminous-screen primitives
+   (EDGE·SCOPE hero, cockpit display) without leaking onto the rest of the app. */
+@import './components/bench/bench.css';
 
 /* ═══════════════════════════════════════════════════════════
    Design Tokens
@@ -11,7 +15,11 @@
    Base Styles
    ═══════════════════════════════════════════════════════════ */
 body {
-  background: var(--bg-primary);
+  /* Atmospheric radial backdrop (Fluid Analytical). Fixed so it spans the
+     viewport behind glass panels rather than scrolling with content. */
+  background: var(--bg-app);
+  background-attachment: fixed;
+  background-color: var(--bg-primary);
   color: var(--text-primary);
   font-family: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -23,7 +31,7 @@ body {
 }
 
 ::selection {
-  background: rgba(88,166,255,0.3);
+  background: rgba(70,230,200,0.3);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -82,23 +90,74 @@ body {
   /* ═══════════════════════════════════════════════════════════
      Glass & Card Effects
      ═══════════════════════════════════════════════════════════ */
+  /* Data card — kept near-opaque for dense-number legibility, glass hairline. */
   .glass-card {
     background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 16px;
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.4);
   }
 
   .glass-card-hover {
     background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 16px;
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
     transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
   }
   .glass-card-hover:hover {
-    border-color: rgba(88,166,255,0.4);
-    box-shadow: 0 0 20px rgba(88,166,255,0.1), 0 8px 32px rgba(0,0,0,0.3);
+    border-color: var(--glass-border-strong);
+    box-shadow: 0 0 20px rgba(70,230,200,0.08), 0 8px 32px rgba(0,0,0,0.3);
     transform: translateY(-1px);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     Fluid Analytical shell — translucent blurred chrome (nav, rails,
+     outer panels). Sits over the body radial backdrop.
+     ═══════════════════════════════════════════════════════════ */
+  .glass-panel {
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.30);
+  }
+  .glass-panel-strong {
+    background: var(--glass-bg-strong);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid var(--glass-border);
+  }
+  .hairline { border-color: var(--glass-border); }
+
+  /* Faint instrument graticule, for empty canvas areas behind data. */
+  .subtle-grid {
+    background-image:
+      linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* ── Typography scale (Fluid Analytical) ──
+     Display/headlines = Bricolage (.font-display); body = Inter (global);
+     every measured number/part-code = JetBrains Mono (.metric-value / .mono). */
+  .mono {
+    font-family: 'JetBrains Mono Variable', ui-monospace, 'Fira Code', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+  .t-eyebrow {
+    font-family: 'JetBrains Mono Variable', ui-monospace, monospace;
+    font-size: 11px;
+    line-height: 16px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+  .t-label {
+    font-family: 'JetBrains Mono Variable', ui-monospace, monospace;
+    font-size: 10px;
+    line-height: 14px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
   }
 
   /* ═══════════════════════════════════════════════════════════
@@ -111,7 +170,9 @@ body {
   }
 
   .font-display {
-    font-family: 'Manrope Variable', 'Inter Variable', system-ui, sans-serif;
+    font-family: 'Bricolage Grotesque Variable', 'Bricolage Grotesque',
+      'Manrope Variable', system-ui, sans-serif;
+    letter-spacing: -0.02em;
   }
 
   .gradient-text {
@@ -156,11 +217,11 @@ body {
     background: transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #30363d;
+    background: var(--glass-border-strong);
     border-radius: 3px;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #58a6ff;
+    background: var(--accent-mint);
   }
 
   /* ═══════════════════════════════════════════════════════════
@@ -177,11 +238,11 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
-  .badge-blue { background: rgba(88,166,255,0.15); color: var(--accent-blue); }
+  .badge-blue { background: rgba(70,230,200,0.15); color: var(--accent-blue); }
   .badge-green { background: rgba(63,185,80,0.15); color: var(--accent-green); }
   .badge-red { background: rgba(248,81,73,0.15); color: var(--accent-red); }
   .badge-amber { background: rgba(210,153,34,0.15); color: var(--accent-amber); }
-  .badge-purple { background: rgba(210,168,255,0.15); color: var(--accent-purple); }
+  .badge-purple { background: rgba(95,243,214,0.15); color: var(--accent-purple); }
 
   /* ═══════════════════════════════════════════════════════════
      Metric Card Accent Borders
@@ -257,7 +318,7 @@ body {
     background: linear-gradient(
       90deg,
       rgba(48, 54, 61, 0.4) 0%,
-      rgba(88, 166, 255, 0.08) 50%,
+      rgba(70, 230, 200, 0.08) 50%,
       rgba(48, 54, 61, 0.4) 100%
     );
     background-size: 200% 100%;
@@ -294,11 +355,11 @@ body {
   .badge {
     font-variant-numeric: tabular-nums;
   }
-  .badge-blue   { box-shadow: inset 0 0 0 1px rgba(88,166,255,0.25); }
+  .badge-blue   { box-shadow: inset 0 0 0 1px rgba(70,230,200,0.25); }
   .badge-green  { box-shadow: inset 0 0 0 1px rgba(63,185,80,0.30); }
   .badge-red    { box-shadow: inset 0 0 0 1px rgba(248,81,73,0.30); }
   .badge-amber  { box-shadow: inset 0 0 0 1px rgba(210,153,34,0.30); }
-  .badge-purple { box-shadow: inset 0 0 0 1px rgba(210,168,255,0.30); }
+  .badge-purple { box-shadow: inset 0 0 0 1px rgba(95,243,214,0.30); }
 
   /* ─── Number tabular utility (not all browsers honour cv11/ss01 tokens) ─── */
   .tabular { font-variant-numeric: tabular-nums; }
@@ -309,7 +370,7 @@ body {
   }
   .lift-on-hover:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.25), 0 0 0 1px rgba(88,166,255,0.18);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25), 0 0 0 1px rgba(70,230,200,0.18);
   }
 
   /* ─── Spinner (kept for short async waits) ─── */
@@ -361,8 +422,7 @@ body {
 }
 .tab-btn:hover { color: var(--text-primary); }
 .tab-btn[data-active='true'] {
-  color: var(--accent-blue);
-  text-shadow: 0 0 12px rgba(88, 166, 255, 0.45);
+  color: var(--accent-mint);
 }
 .tab-btn::after {
   content: '';
@@ -372,11 +432,10 @@ body {
   bottom: -10px;
   height: 2px;
   border-radius: 1px;
-  background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+  background: var(--accent-mint);
   transform: scaleX(0);
   transform-origin: left center;
   transition: transform var(--dur-base) var(--ease-spring);
-  box-shadow: 0 0 12px rgba(88, 166, 255, 0.5);
 }
 .tab-btn[data-active='true']::after { transform: scaleX(1); }
 
@@ -388,8 +447,8 @@ body {
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(88, 166, 255, 0.18) 35%,
-    rgba(210, 168, 255, 0.18) 65%,
+    rgba(70, 230, 200, 0.16) 35%,
+    rgba(70, 230, 200, 0.16) 65%,
     transparent 100%
   );
   margin: 1rem 0;
@@ -401,11 +460,11 @@ body {
 .file-drop {
   position: relative;
   transition: border-color var(--dur-base) var(--ease-out), background var(--dur-base) var(--ease-out);
-  background: linear-gradient(180deg, rgba(88,166,255,0.04) 0%, transparent 100%);
+  background: linear-gradient(180deg, rgba(70,230,200,0.04) 0%, transparent 100%);
 }
 .file-drop:hover {
   border-color: var(--accent-blue);
-  background: linear-gradient(180deg, rgba(88,166,255,0.10) 0%, rgba(88,166,255,0.02) 100%);
+  background: linear-gradient(180deg, rgba(70,230,200,0.10) 0%, rgba(70,230,200,0.02) 100%);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -420,7 +479,7 @@ body {
   inset: 0;
   z-index: -1;
   background:
-    radial-gradient(800px 400px at 80% 10%, rgba(88,166,255,0.05), transparent 60%),
+    radial-gradient(800px 400px at 80% 10%, rgba(70,230,200,0.05), transparent 60%),
     radial-gradient(700px 350px at 10% 90%, rgba(63,185,80,0.04), transparent 60%);
   pointer-events: none;
 }

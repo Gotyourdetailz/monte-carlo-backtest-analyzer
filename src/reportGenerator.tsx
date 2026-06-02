@@ -24,7 +24,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 700,
-    color: '#58a6ff',
+    color: '#46e6c8',
     marginBottom: 8,
   },
   subtitle: {
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
   pillGreen: { backgroundColor: '#3fb950' },
   pillAmber: { backgroundColor: '#d29922' },
   pillRed: { backgroundColor: '#f85149' },
-  pillBlue: { backgroundColor: '#58a6ff' },
+  pillBlue: { backgroundColor: '#46e6c8' },
   rowBetween: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -586,11 +586,11 @@ const PdfDocument = ({ resultsMap, imagesMap, dailyLossLimit }: PdfDocumentProps
       {/* Cover Page */}
       <Page size="A4" style={styles.page}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ fontSize: 36, color: '#58a6ff', fontWeight: 700, marginBottom: 20 }}>
+          <Text style={{ fontSize: 36, color: '#46e6c8', fontWeight: 700, marginBottom: 20 }}>
             Institutional Tear Sheet
           </Text>
           <Text style={{ fontSize: 16, color: '#8b949e', marginBottom: 40 }}>
-            Monte Carlo Backtest Analyzer
+            EdgeCheck
           </Text>
           <Text style={{ fontSize: 12, color: '#e6edf3', marginBottom: 10 }}>Included Models:</Text>
           {models.map((m) => (
@@ -660,7 +660,7 @@ const PdfDocument = ({ resultsMap, imagesMap, dailyLossLimit }: PdfDocumentProps
             <Text
               style={styles.footer}
               render={({ pageNumber, totalPages }) =>
-                `Monte Carlo Backtest Analyzer | Page ${pageNumber} of ${totalPages}`
+                `EdgeCheck | Page ${pageNumber} of ${totalPages}`
               }
               fixed
             />
@@ -681,7 +681,7 @@ const PdfDocument = ({ resultsMap, imagesMap, dailyLossLimit }: PdfDocumentProps
               <Text
                 style={styles.footer}
                 render={({ pageNumber, totalPages }) =>
-                  `Monte Carlo Backtest Analyzer | Page ${pageNumber} of ${totalPages}`
+                  `EdgeCheck | Page ${pageNumber} of ${totalPages}`
                 }
                 fixed
               />
@@ -704,7 +704,7 @@ const PdfDocument = ({ resultsMap, imagesMap, dailyLossLimit }: PdfDocumentProps
               <Text
                 style={styles.footer}
                 render={({ pageNumber, totalPages }) =>
-                  `Monte Carlo Backtest Analyzer | Page ${pageNumber} of ${totalPages}`
+                  `EdgeCheck | Page ${pageNumber} of ${totalPages}`
                 }
                 fixed
               />

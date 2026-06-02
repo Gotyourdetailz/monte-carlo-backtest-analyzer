@@ -23,34 +23,6 @@ export const EARLY_ACCESS_URL: string = rawEarlyAccessUrl;
 /** True only when a syntactically valid https URL is configured. */
 export const isEarlyAccessEnabled: boolean = /^https:\/\/\S+$/.test(rawEarlyAccessUrl);
 
-/**
- * Optional Spline 3D hero scene (`.splinecode`) URL for the marketing landing.
- *
- * Empty by default: the hero ships with a self-hosted, brand-coloured canvas
- * backdrop (`BrandHero`) that carries no third-party watermark and needs no
- * network fetch. Set `VITE_SPLINE_SCENE_URL` to a scene exported from
- * spline.design (Export → Public web URL) to switch the hero to that Spline
- * scene instead. The viewer runtime + scene are only fetched when the Spline
- * layer actually renders (see `SplineHero` gating: WebGL, reduced motion, slow
- * network).
- */
-export const SPLINE_SCENE_URL: string = (
-  import.meta.env.VITE_SPLINE_SCENE_URL ?? ''
-).trim();
-
-/**
- * Selects which hero tier the marketing landing renders (the `Hero_Mode` build
- * switch). Set `VITE_HERO_MODE=webgl` to opt into the self-hosted 3D WebGL hero
- * (`WebglHero`) as the top of the capability ladder; any other / unset value
- * preserves the current default ladder (Spline when {@link SPLINE_SCENE_URL} is
- * set, else `VideoHero` in dark theme, else `BrandHero`).
- *
- * Empty by default. Like {@link SPLINE_SCENE_URL}, the WebGL runtime is only
- * fetched when the WebGL tier actually renders, and this switch requires no CSP
- * relaxation — the `prod.spline.design` CSP allowances are left unchanged.
- */
-export const HERO_MODE: string = (import.meta.env.VITE_HERO_MODE ?? '').trim();
-
 /** Public analytics domain (Plausible). Blank → analytics disabled. */
 const analyticsDomain = (import.meta.env.VITE_ANALYTICS_DOMAIN ?? '').trim();
 

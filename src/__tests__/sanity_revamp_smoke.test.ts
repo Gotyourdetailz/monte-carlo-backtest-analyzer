@@ -28,8 +28,8 @@ function read(path: string): string {
 
 // ── Token system (B1) ────────────────────────────────────────────────
 const themeCss = read('src/theme.css');
-assert(/--accent-blue:\s*#58a6ff/i.test(themeCss), 'theme.css defines --accent-blue:#58a6ff');
-assert(/--accent-magenta:\s*#e879f9/i.test(themeCss), 'theme.css defines --accent-magenta:#e879f9');
+assert(/--accent-blue:\s*#46e6c8/i.test(themeCss), 'theme.css defines --accent-blue:#46e6c8 (ion mint)');
+assert(/--accent-mint:\s*#46e6c8/i.test(themeCss), 'theme.css defines --accent-mint:#46e6c8');
 assert(/\[data-theme="light"\]/.test(themeCss), 'theme.css registers a light-mode selector');
 assert(/\[data-density="compact"\]/.test(themeCss), 'theme.css registers a compact-density selector');
 
@@ -52,18 +52,10 @@ assert(
 );
 assert(!/fonts\.googleapis\.com/.test(indexCss), 'index.css has no CSP-violating Google Fonts @import');
 
-// ── No backdrop-filter anywhere in our surfaces (Req 20.1) ────────────
-const surfaceFiles: string[] = [
-  'src/index.css',
-  'src/theme.css',
-  'src/pages/Marketing.tsx',
-  ...fs.readdirSync('src/components/ui').map((f) => `src/components/ui/${f}`),
-];
-for (const f of surfaceFiles) {
-  const src = read(f);
-  const hit = /backdrop-filter|backdrop-blur/.test(src);
-  assert(!hit, `no backdrop-filter/backdrop-blur in ${f}`);
-}
+// Fluid Analytical cutover: the old "no backdrop-filter" rule (Req 20.1) is
+// retired — the glass shell (`.glass-panel`) deliberately uses backdrop-filter.
+// Guard the inverse instead: the glass primitive must exist in index.css.
+assert(/backdrop-filter/.test(indexCss), 'index.css ships the glass shell (backdrop-filter present)');
 
 // ── Structure rule: pure theme logic stays React-free ────────────────
 for (const f of ['src/theme/tokens.ts', 'src/theme/themeMode.ts', 'src/theme/density.ts']) {

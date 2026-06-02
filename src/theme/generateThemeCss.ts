@@ -21,12 +21,15 @@ import {
   densityRootFontPx,
 } from './tokens.js';
 
-/** Glow tokens preserved from the original index.css :root block. */
+/**
+ * Glow tokens (signal halos for the luminous data). Key names preserved; the
+ * `--glow-blue` halo is now ion-mint to match the rebuilt accent.
+ */
 const glowTokens: Readonly<Record<string, string>> = {
-  '--glow-blue': '0 0 20px rgba(88,166,255,0.25)',
-  '--glow-green': '0 0 20px rgba(63,185,80,0.25)',
-  '--glow-red': '0 0 20px rgba(248,81,73,0.25)',
-  '--glow-amber': '0 0 20px rgba(210,153,34,0.25)',
+  '--glow-blue': '0 0 20px rgba(70,230,200,0.28)',
+  '--glow-green': '0 0 20px rgba(95,179,122,0.25)',
+  '--glow-red': '0 0 20px rgba(210,84,78,0.25)',
+  '--glow-amber': '0 0 20px rgba(205,161,60,0.25)',
 };
 
 const INDENT = '  ';

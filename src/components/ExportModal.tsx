@@ -72,8 +72,8 @@ export function ExportModal({ isOpen, onClose, resultsHistory, onExport, isExpor
                     !isAvailable
                       ? 'border-[var(--border)]/50 bg-[var(--border)]/20 opacity-50 cursor-not-allowed'
                       : isSelected
-                        ? 'border-[var(--accent-blue)] bg-[var(--accent-blue)]/10 cursor-pointer shadow-[0_0_15px_rgba(88,166,255,0.1)]'
-                        : 'border-[var(--border)] bg-[#161b22] cursor-pointer hover:border-[var(--text-secondary)]',
+                        ? 'border-[var(--accent-mint)] bg-[var(--accent-mint)]/10 cursor-pointer shadow-[0_0_15px_rgba(70,230,200,0.1)]'
+                        : 'border-[var(--border)] bg-[var(--bg-elevated)] cursor-pointer hover:border-[var(--text-secondary)]',
                   )}
                 >
                   <input
@@ -89,7 +89,7 @@ export function ExportModal({ isOpen, onClose, resultsHistory, onExport, isExpor
                   )}>
                     {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-[var(--bg-secondary)]" />}
                   </div>
-                  <span className={cn('font-medium', !isAvailable ? 'text-[var(--text-secondary)]' : 'text-white')}>
+                  <span className={cn('font-medium', !isAvailable ? 'text-[var(--text-secondary)]' : 'text-[var(--text-primary)]')}>
                     {m.label}
                   </span>
                   {!isAvailable && (

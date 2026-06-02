@@ -208,13 +208,13 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
       className={cn(
         'w-[280px] bg-[var(--bg-secondary)] border-r flex flex-col p-5 overflow-y-auto shrink-0 z-10 custom-scrollbar transition-all duration-500',
         isLoading
-          ? 'border-[var(--accent-blue)]/50 shadow-[var(--glow-blue)]'
+          ? 'border-[var(--accent-mint)]/60'
           : 'border-[var(--border)]',
       )}
     >
       <div className="flex items-center gap-3 mb-8 mt-2">
-        <div className="brand-mark w-8 h-8 bg-gradient-to-br from-[var(--accent-green)] to-[#238636] rounded-lg flex items-center justify-center font-bold text-white text-xs shadow-lg">MC</div>
-        <h1 className="text-lg font-semibold tracking-tight gradient-text">MC Risk Desk</h1>
+        <div className="brand-mark w-8 h-8 bg-[var(--accent-mint)] rounded-lg flex items-center justify-center font-bold text-[var(--bg-primary)] text-xs">EC</div>
+        <h1 className="font-display text-lg font-semibold tracking-tight text-[var(--text-primary)]">Edge<span className="text-[var(--accent-mint)]">Check</span></h1>
         <button
           type="button"
           onClick={onOpenHistory}
@@ -301,7 +301,7 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
                       }
                       className="accent-[#238636]"
                     />
-                    <span className="text-xs font-medium text-white truncate">
+                    <span className="text-xs font-medium text-[var(--text-primary)] truncate">
                       {st.groupByInstrument ? `${st.name} (${csvData.filter((r) => String(r[ntInstrumentCol]) === st.column).length} trades)` : st.column}
                     </span>
                   </label>
@@ -318,7 +318,7 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
                           )
                         }
                         placeholder="Display name"
-                        className="w-full text-xs p-2 border border-[var(--border)] rounded bg-[#161b22] text-white"
+                        className="w-full text-xs p-2 border border-[var(--border)] rounded bg-[var(--bg-elevated)] text-[var(--text-primary)]"
                       />
                       <div className="flex justify-between text-[10px]">
                         <span className="text-[var(--text-secondary)]">Weight</span>
@@ -369,7 +369,7 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
               <select
                 value={pnlCol}
                 onChange={(e) => setPnlCol(e.target.value)}
-                className="w-full text-sm p-2 outline-none border border-[var(--border)] rounded bg-[#161b22] text-white focus:border-[var(--accent-blue)] transition-colors"
+                className="w-full text-sm p-2 outline-none border border-[var(--border)] rounded bg-[var(--bg-elevated)] text-[var(--text-primary)] focus:border-[var(--accent-blue)] transition-colors"
               >
                 {columns.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
@@ -381,7 +381,7 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
             <select
               value={rowFrequency}
               onChange={(e) => setRowFrequency(e.target.value as 'trade' | 'day')}
-              className="w-full text-sm p-2 outline-none border border-[var(--border)] rounded bg-[#161b22] text-white focus:border-[var(--accent-blue)] transition-colors"
+              className="w-full text-sm p-2 outline-none border border-[var(--border)] rounded bg-[var(--bg-elevated)] text-[var(--text-primary)] focus:border-[var(--accent-blue)] transition-colors"
             >
               <option value="trade">Per trade (annualize by min(252, N))</option>
               <option value="day">Per trading day (252 periods/year)</option>
@@ -393,7 +393,7 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
             <select
               value={dataFormat}
               onChange={(e) => setDataFormat(e.target.value as 'pct' | 'mult' | 'absolute')}
-              className="w-full text-sm p-2 outline-none border border-[var(--border)] rounded bg-[#161b22] text-white focus:border-[var(--accent-blue)] transition-colors"
+              className="w-full text-sm p-2 outline-none border border-[var(--border)] rounded bg-[var(--bg-elevated)] text-[var(--text-primary)] focus:border-[var(--accent-blue)] transition-colors"
             >
               <option value="absolute">Absolute PnL (e.g. $150 or -$20)</option>
               <option value="pct">Percentage Returns (e.g. 1.5 for 1.5%)</option>
@@ -407,14 +407,14 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
               <select
                 value={regimeCol}
                 onChange={(e) => setRegimeCol(e.target.value)}
-                className="w-full text-sm p-2 outline-none border border-[var(--border)] rounded bg-[#161b22] text-white focus:border-[var(--accent-blue)] transition-colors"
+                className="w-full text-sm p-2 outline-none border border-[var(--border)] rounded bg-[var(--bg-elevated)] text-[var(--text-primary)] focus:border-[var(--accent-blue)] transition-colors"
               >
                 <option value="None">None (Default)</option>
                 <option value="AUTO">Auto-Detect (Rolling Win-Rate)</option>
                 {columns.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
               {regimeCol === 'AUTO' && (
-                <div className="mt-3 p-3 bg-[#161b22] border border-[var(--border)] rounded-lg space-y-3 animate-in fade-in">
+                <div className="mt-3 p-3 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg space-y-3 animate-in fade-in">
                   <div>
                     <div className="flex justify-between text-[10px] mb-1">
                       <span className="text-[var(--text-secondary)]">Rolling Window (Trades)</span>
@@ -453,7 +453,7 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
               <select
                 value={timestampCol}
                 onChange={(e) => setTimestampCol(e.target.value)}
-                className="w-full text-sm p-2 outline-none border border-[var(--border)] rounded bg-[#161b22] text-white focus:border-[var(--accent-blue)] transition-colors"
+                className="w-full text-sm p-2 outline-none border border-[var(--border)] rounded bg-[var(--bg-elevated)] text-[var(--text-primary)] focus:border-[var(--accent-blue)] transition-colors"
               >
                 <option value="None">None</option>
                 {columns.map((c) => (
@@ -472,7 +472,7 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
               <select
                 value={benchmarkCol}
                 onChange={(e) => setBenchmarkCol(e.target.value)}
-                className="w-full text-sm p-2 outline-none border border-[var(--border)] rounded bg-[#161b22] text-white focus:border-[var(--accent-blue)] transition-colors"
+                className="w-full text-sm p-2 outline-none border border-[var(--border)] rounded bg-[var(--bg-elevated)] text-[var(--text-primary)] focus:border-[var(--accent-blue)] transition-colors"
               >
                 <option value="None">None</option>
                 {columns.map((c) => (
@@ -483,7 +483,7 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
                 <select
                   value={benchmarkFormat}
                   onChange={(e) => setBenchmarkFormat(e.target.value as 'pct' | 'mult')}
-                  className="mt-2 w-full text-sm p-2 outline-none border border-[var(--border)] rounded bg-[#161b22] text-white focus:border-[var(--accent-blue)] transition-colors"
+                  className="mt-2 w-full text-sm p-2 outline-none border border-[var(--border)] rounded bg-[var(--bg-elevated)] text-[var(--text-primary)] focus:border-[var(--accent-blue)] transition-colors"
                 >
                   <option value="pct">Percent (e.g. 1.5 means 1.5%)</option>
                   <option value="mult">Decimal (e.g. 0.015 means 1.5%)</option>
@@ -503,7 +503,7 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
                 value={factorCols}
                 onChange={(e) => setFactorCols(e.target.value)}
                 placeholder="e.g. Mkt-RF, SMB, HML"
-                className="w-full text-xs p-2 outline-none border border-[var(--border)] rounded bg-[#161b22] text-white focus:border-[var(--accent-blue)] transition-colors"
+                className="w-full text-xs p-2 outline-none border border-[var(--border)] rounded bg-[var(--bg-elevated)] text-[var(--text-primary)] focus:border-[var(--accent-blue)] transition-colors"
               />
               <p className="text-[10px] text-[var(--text-secondary)] mt-1 leading-tight">
                 Comma-separated CSV column names. Adds a multi-factor regression panel (e.g. Fama-French 3-factor)
@@ -538,7 +538,7 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
               <select
                 value={samplingMode}
                 onChange={(e) => setSamplingMode(e.target.value as SamplingMode)}
-                className="w-full text-sm p-2 outline-none border border-[var(--border)] rounded bg-[#161b22] text-white focus:border-[var(--accent-blue)] transition-colors"
+                className="w-full text-sm p-2 outline-none border border-[var(--border)] rounded bg-[var(--bg-elevated)] text-[var(--text-primary)] focus:border-[var(--accent-blue)] transition-colors"
               >
                 <option value="permutation">Permutation (drawdown / sequence risk)</option>
                 <option value="bootstrap">Bootstrap (terminal PnL + drawdown)</option>
@@ -565,7 +565,7 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
                 onChange={(e) =>
                   setPortfolioResampling(e.target.value as PortfolioResampling)
                 }
-                className="w-full text-sm p-2 outline-none border border-[var(--border)] rounded bg-[#161b22] text-white focus:border-[var(--accent-blue)] transition-colors"
+                className="w-full text-sm p-2 outline-none border border-[var(--border)] rounded bg-[var(--bg-elevated)] text-[var(--text-primary)] focus:border-[var(--accent-blue)] transition-colors"
               >
                 <option value="gaussian_copula">Gaussian copula (correlated)</option>
                 <option value="student_t_copula">Student-t copula (tail dependence)</option>
@@ -607,7 +607,7 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
               step={0.01}
               value={commissionPerTrade}
               onChange={(e) => setCommissionPerTrade(Number(e.target.value))}
-              className="bg-[#161b22] border border-[var(--border)] rounded px-3 py-2 font-mono text-sm text-white focus:border-[var(--accent-blue)] outline-none w-full"
+              className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded px-3 py-2 font-mono text-sm text-[var(--text-primary)] focus:border-[var(--accent-blue)] outline-none w-full"
             />
           </div>
 
@@ -616,7 +616,7 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
             <select
               value={slippageModel}
               onChange={(e) => setSlippageModel(e.target.value as SlippageModel)}
-              className="w-full text-sm p-2 outline-none border border-[var(--border)] rounded bg-[#161b22] text-white focus:border-[var(--accent-blue)] transition-colors"
+              className="w-full text-sm p-2 outline-none border border-[var(--border)] rounded bg-[var(--bg-elevated)] text-[var(--text-primary)] focus:border-[var(--accent-blue)] transition-colors"
             >
               <option value="none">None</option>
               <option value="fixed">Fixed (commission only)</option>
@@ -660,7 +660,7 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
                 type="number"
                 value={randomSeed}
                 onChange={(e) => setRandomSeed(Number(e.target.value))}
-                className="bg-[#161b22] border border-[var(--border)] rounded px-3 py-2 font-mono text-sm text-white focus:border-[var(--accent-blue)] outline-none w-full"
+                className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded px-3 py-2 font-mono text-sm text-[var(--text-primary)] focus:border-[var(--accent-blue)] outline-none w-full"
               />
             )}
           </div>
@@ -671,7 +671,7 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
               type="number"
               value={startingCapital}
               onChange={(e) => setStartingCapital(Number(e.target.value))}
-              className="bg-[#161b22] border border-[var(--border)] rounded px-3 py-2 font-mono text-sm text-white focus:border-[var(--accent-blue)] outline-none w-full"
+              className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded px-3 py-2 font-mono text-sm text-[var(--text-primary)] focus:border-[var(--accent-blue)] outline-none w-full"
             />
           </div>
 
@@ -710,7 +710,7 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
               <select
                 value={propPreset}
                 onChange={(e) => applyPropPreset(e.target.value)}
-                className="w-full text-sm p-2 outline-none border border-[var(--border)] rounded bg-[#161b22] text-white focus:border-[var(--accent-blue)] transition-colors"
+                className="w-full text-sm p-2 outline-none border border-[var(--border)] rounded bg-[var(--bg-elevated)] text-[var(--text-primary)] focus:border-[var(--accent-blue)] transition-colors"
               >
                 <option value="">Custom / manual</option>
                 {PROP_FIRM_PRESETS.map((p) => (
@@ -727,7 +727,7 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
                     type="number"
                     value={propTarget}
                     onChange={(e) => setPropTarget(Number(e.target.value))}
-                    className="bg-[#161b22] border border-[var(--border)] rounded px-3 py-2 text-sm font-mono text-white focus:border-[var(--accent-blue)] outline-none w-full"
+                    className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded px-3 py-2 text-sm font-mono text-[var(--text-primary)] focus:border-[var(--accent-blue)] outline-none w-full"
                   />
                   <div className="text-[10px] text-[var(--text-secondary)] mt-1 leading-tight">TopOneFutures default: $3,000</div>
                 </div>
@@ -738,7 +738,7 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
                     placeholder="e.g. 1500"
                     value={propMaxDrawdown}
                     onChange={(e) => setPropMaxDrawdown(Number(e.target.value))}
-                    className="bg-[#161b22] border border-[var(--border)] rounded px-3 py-2 text-sm font-mono text-white focus:border-[var(--accent-blue)] outline-none w-full"
+                    className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded px-3 py-2 text-sm font-mono text-[var(--text-primary)] focus:border-[var(--accent-blue)] outline-none w-full"
                   />
                   <div className="text-[10px] text-[var(--text-secondary)] mt-1 leading-tight">Enter as absolute dollar amount. TopOneFutures default: $1,500</div>
                   {propMaxDrawdown > startingCapital && (
@@ -781,7 +781,7 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
                           type="number"
                           value={dailyMaxLosses}
                           onChange={(e) => setDailyMaxLosses(Number(e.target.value))}
-                          className="bg-[#161b22] border border-[var(--border)] rounded px-3 py-2 text-sm font-mono text-white focus:border-[var(--accent-blue)] outline-none w-full"
+                          className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded px-3 py-2 text-sm font-mono text-[var(--text-primary)] focus:border-[var(--accent-blue)] outline-none w-full"
                         />
                       </div>
                       <div>
@@ -790,7 +790,7 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
                           type="number"
                           value={dailyMaxLossDollars}
                           onChange={(e) => setDailyMaxLossDollars(Number(e.target.value))}
-                          className="bg-[#161b22] border border-[var(--border)] rounded px-3 py-2 text-sm font-mono text-white focus:border-[var(--accent-blue)] outline-none w-full"
+                          className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded px-3 py-2 text-sm font-mono text-[var(--text-primary)] focus:border-[var(--accent-blue)] outline-none w-full"
                         />
                       </div>
                       <div>
@@ -829,7 +829,7 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
               (activeTab === 'portfolio' && enabledPortfolioCount < 2)
             }
             className={cn(
-              'btn-press w-full bg-gradient-to-r from-[#238636] to-[#2ea043] hover:from-[#2ea043] hover:to-[var(--accent-green)] disabled:opacity-50 disabled:cursor-not-allowed text-white py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#238636]/30 hover:shadow-[#238636]/50',
+              'btn-press w-full bg-gradient-to-r from-[#238636] to-[#2ea043] hover:from-[#2ea043] hover:to-[var(--accent-green)] disabled:opacity-50 disabled:cursor-not-allowed text-[var(--text-primary)] py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#238636]/30 hover:shadow-[#238636]/50',
               isLoading && 'animate-pulse',
             )}
           >
@@ -846,7 +846,7 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
               </div>
               <button
                 onClick={handleCancel}
-                className="w-full bg-transparent border border-[var(--border)] hover:bg-[var(--bg-card)] hover:border-[var(--accent-red)] text-white py-2 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full bg-transparent border border-[var(--border)] hover:bg-[var(--bg-card)] hover:border-[var(--accent-red)] text-[var(--text-primary)] py-2 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <X className="w-3 h-3" />
                 CANCEL

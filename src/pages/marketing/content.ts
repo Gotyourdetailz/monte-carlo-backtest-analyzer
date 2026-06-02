@@ -27,11 +27,12 @@ export interface AccentStyle {
   text: string;
 }
 
-/** Mirror EmptyHero's accent map so the two surfaces read as one product. */
+/** Mirror EmptyHero's accent map so the two surfaces read as one product.
+ *  Fluid Analytical: the trio reads ion-mint / bright-mint / amber (no violet). */
 export const ACCENT: Record<'blue' | 'magenta' | 'amber', AccentStyle> = {
-  blue: { border: 'border-[rgba(88,166,255,0.30)]', text: 'text-[var(--accent-blue)]' },
-  magenta: { border: 'border-[rgba(232,121,249,0.35)]', text: 'text-[var(--accent-magenta)]' },
-  amber: { border: 'border-[rgba(210,153,34,0.30)]', text: 'text-[var(--accent-amber)]' },
+  blue: { border: 'border-[rgba(70,230,200,0.30)]', text: 'text-[var(--accent-mint)]' },
+  magenta: { border: 'border-[rgba(95,243,214,0.30)]', text: 'text-[var(--accent-mint-bright)]' },
+  amber: { border: 'border-[rgba(205,161,60,0.30)]', text: 'text-[var(--accent-amber)]' },
 };
 
 /** Brand-gradient fill, applied inline exactly as EmptyHero does. */
@@ -64,7 +65,7 @@ export const FEATURES: readonly Feature[] = [
     icon: ShieldAlert,
     title: 'Tail & ruin risk',
     body:
-      'EVT tail extrapolation and probability-of-ruin estimate how bad an unseen losing streak could get — beyond your worst historical day.',
+      'EVT tail extrapolation and probability-of-ruin estimate how bad an unseen losing streak could get, beyond your worst historical day.',
     accent: 'amber',
   },
 ];
@@ -85,7 +86,7 @@ export const STEPS: readonly Step[] = [
   {
     icon: Activity,
     title: 'Monte Carlo runs the gauntlet',
-    body: 'Thousands of simulated challenge runs are resampled from your own trades — order shuffled, paths drawn.',
+    body: 'Thousands of simulated challenge runs are resampled from your own trades, order shuffled, paths drawn.',
   },
   {
     icon: Gauge,
@@ -104,12 +105,12 @@ export const FAQS: readonly Faq[] = [
   {
     q: 'Where does my trade data go?',
     a:
-      'Nowhere. Everything runs locally in your browser — your trades never leave your machine. Results persist only in your own local IndexedDB, on your device.',
+      'Nowhere. Everything runs locally in your browser. Your trades never leave your machine. Results persist only in your own local IndexedDB, on your device.',
   },
   {
     q: 'Which prop firms are supported?',
     a:
-      'Challenge presets are built in for TopOneFutures, FTMO, and Apex — profit target, max drawdown, and daily-loss rules — so the simulation models the ruleset you actually trade under.',
+      'Challenge presets are built in for TopOneFutures, FTMO, and Apex: profit target, max drawdown, and daily-loss rules, so the simulation models the ruleset you actually trade under.',
   },
   {
     q: 'What CSV formats can I upload?',

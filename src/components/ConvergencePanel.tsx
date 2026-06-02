@@ -95,7 +95,7 @@ export function ConvergencePanel({ convergence }: Props) {
                   tickFormatter={(v: number) => `$${v.toLocaleString()}`}
                 />
                 <Tooltip
-                  contentStyle={{ background: '#161b22', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '11px' }}
+                  contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '11px' }}
                   labelFormatter={(v: number) => `N = ${v.toLocaleString()}`}
                   formatter={(v: number) => [`$${v.toLocaleString()}`, undefined]}
                 />
@@ -137,12 +137,12 @@ export function ConvergencePanel({ convergence }: Props) {
                   domain={[0, 'auto']}
                 />
                 <Tooltip
-                  contentStyle={{ background: '#161b22', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '11px' }}
+                  contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '11px' }}
                   labelFormatter={(v: number) => `N = ${v.toLocaleString()}`}
                   formatter={(v: number) => [`${v}%`, undefined]}
                 />
                 <Legend wrapperStyle={{ fontSize: '10px' }} />
-                <Line type="monotone" dataKey="Ruin %" stroke="#d2a8ff" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="Ruin %" stroke="var(--accent-amber)" strokeWidth={2} dot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>

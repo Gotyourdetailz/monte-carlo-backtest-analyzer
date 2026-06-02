@@ -17,13 +17,6 @@ const Marketing = lazy(() =>
   import('./pages/Marketing').then((m) => ({default: m.Marketing})),
 );
 const App = lazy(() => import('./App.tsx'));
-// Non-destructive design-rebuild prototypes (Bench Instrument direction).
-const Bench = lazy(() =>
-  import('./pages/Bench').then((m) => ({default: m.Bench})),
-);
-const BenchLanding = lazy(() =>
-  import('./pages/BenchLanding').then((m) => ({default: m.BenchLanding})),
-);
 
 // Apply persisted theme/density to <html> before first paint (no flash).
 initThemeBeforeRender();
@@ -41,8 +34,6 @@ const Fallback = (
 const router = createBrowserRouter([
   {path: '/', element: <Suspense fallback={Fallback}><Marketing /></Suspense>},
   {path: '/app', element: <Suspense fallback={Fallback}><App /></Suspense>},
-  {path: '/bench', element: <Suspense fallback={Fallback}><Bench /></Suspense>},
-  {path: '/landing', element: <Suspense fallback={Fallback}><BenchLanding /></Suspense>},
 ]);
 
 createRoot(document.getElementById('root')!).render(

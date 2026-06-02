@@ -16,100 +16,45 @@
  * Sections: 1) Top nav  2) Hero  3) What it does  4) How it works
  *           5) Pricing  6) FAQ   7) Footer.
  */
-import { Fragment, useState, type ReactElement } from 'react';
+import { Fragment, type ReactElement } from 'react';
 import { Link } from 'react-router-dom';
 import {
+  Activity,
   Trophy,
   Target,
   ShieldAlert,
   ArrowRight,
-  TrendingUp,
-  TrendingDown,
   Lock,
   Database,
   FileText,
 } from 'lucide-react';
-import { isEarlyAccessEnabled, SPLINE_SCENE_URL, HERO_MODE } from '../config';
+import { isEarlyAccessEnabled } from '../config';
 import { useTheme } from '../theme/ThemeProvider';
 import { ThemeToggle } from '../components/ThemeToggle';
-import { SplineHero } from '../components/SplineHero';
-import { BrandHero } from '../components/BrandHero';
-import { VideoHero } from '../components/VideoHero';
-import { WebglHero } from '../components/WebglHero';
-import { selectActiveHeroTier } from '../components/heroLadder';
-import {
-  ACCENT,
-  BRAND_GRADIENT,
-  DISCLAIMER,
-  FAQS,
-  FEATURES,
-  STEPS,
-} from './marketing/content';
-import {
-  BeforeAfterCard,
-  FaqItem,
-  InfoCard,
-  PrimaryCta,
-  ReserveCta,
-  SectionHeading,
-} from './marketing/components';
-
-/**
- * Synchronous WebGL capability probe for the Hero_Ladder (Req 3.2 / 3.3).
- *
- * `selectActiveHeroTier` is pure and needs to be told whether a WebGL context
- * can be created so it can pick the WebGL tier or fall through to the
- * theme-appropriate next tier. (`WebglHero` also has its own internal gate, but
- * the ladder must decide which component to mount in the first place.) This
- * creates a throwaway canvas and probes for a context, returning `false` when
- * the DOM is unavailable (SSR / tests) or the probe throws. Side-effect-free
- * and decided once per mount via a `useState` initialiser so it is stable
- * across renders.
- */
-function detectWebGL(): boolean {
-  if (typeof document === 'undefined') return false;
-  try {
-    const canvas = document.createElement('canvas');
-    return Boolean(
-      canvas.getContext('webgl') ||
-        canvas.getContext('webgl2') ||
-        canvas.getContext('experimental-webgl'),
-    );
-  } catch {
-    return false;
-  }
-}
+import { EdgeScopeHero } from '../components/bench/EdgeScopeHero';
+import { HeroVideoBackdrop } from '../components/bench/HeroVideoBackdrop';
+import { EdgeTrace, PassGauge, TailSpark } from '../components/bench/MiniReadouts';
+import { DISCLAIMER, FAQS, STEPS } from './marketing/content';
+import { FaqItem, PrimaryCta, ReserveCta, SectionHeading } from './marketing/components';
 
 export function Marketing(): ReactElement {
   const { resolved } = useTheme();
-  // Probe WebGL availability once (stable across renders) so the pure
-  // Hero_Ladder selector can choose the WebGL tier or fall through (Req 3.2/3.3).
-  const [hasWebGL] = useState(detectWebGL);
-  // Deterministic hero-tier selection from the documented precedence table
-  // (Req 3.1–3.4): WebGL → Video/Brand → Spline → Video/Brand.
-  const heroTier = selectActiveHeroTier({
-    mode: HERO_MODE,
-    hasWebGL,
-    theme: resolved,
-    splineUrl: SPLINE_SCENE_URL,
-  });
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[var(--bg-primary)] text-[var(--text-primary)]">
-      {/* ── 1. Top nav ── */}
+    <div className="min-h-screen overflow-x-hidden text-[var(--text-primary)]">
+      {/* Low-opacity Monte-Carlo path-fan behind the whole page; fades on scroll. */}
+      <HeroVideoBackdrop />
+      {/* ── 1. Top nav (glass) ── */}
       <nav
         aria-label="Primary"
-        className="sticky top-0 z-20 border-b border-[var(--border)] bg-[var(--bg-primary)]"
+        className="glass-panel sticky top-0 z-30 border-x-0 border-t-0"
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4">
-          <Link to="/" className="flex items-center gap-2">
-            <span
-              className="grid h-7 w-7 place-items-center rounded-md text-white"
-              style={BRAND_GRADIENT}
-            >
-              <Trophy className="h-4 w-4" />
+          <Link to="/" className="flex items-center gap-2.5">
+            <span className="grid h-7 w-7 place-items-center rounded-md bg-[var(--accent-mint)] text-[var(--bg-primary)]">
+              <Activity className="h-4 w-4" />
             </span>
-            <span className="font-display text-sm font-semibold tracking-tight text-[var(--text-primary)]">
-              Monte&nbsp;Carlo <span className="gradient-text">Backtest Analyzer</span>
+            <span className="font-display text-base font-semibold tracking-tight text-[var(--text-primary)]">
+              Edge<span className="text-[var(--accent-mint)]">Check</span>
             </span>
           </Link>
 
@@ -118,8 +63,7 @@ export function Marketing(): ReactElement {
             <ReserveCta className="hidden sm:inline-flex" />
             <Link
               to="/app"
-              className="btn-press inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white"
-              style={BRAND_GRADIENT}
+              className="btn-press inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-[var(--accent-mint)] px-4 py-2.5 text-sm font-semibold text-[var(--bg-primary)] transition-colors hover:bg-[var(--accent-mint-bright)]"
             >
               Launch analyzer
               <ArrowRight className="h-4 w-4" />
@@ -129,83 +73,50 @@ export function Marketing(): ReactElement {
       </nav>
 
       <main>
-        {/* ── 2. Hero ── */}
+        {/* ── 2. Hero — instrument-forward: the EDGE·SCOPE is the spectacle ── */}
         <section
           aria-labelledby="hero-heading"
-          // `isolate` creates a stacking context so the SplineHero's `-z-10`
-          // backdrop is contained here and paints above the page background —
-          // without it the negative-z layer escapes to the root context and is
-          // hidden behind the `bg-[var(--bg-primary)]` wrapper.
-          className="relative isolate overflow-hidden px-6 pb-20 pt-16 sm:pt-24"
+          className="relative isolate overflow-hidden px-6 pb-20 pt-14 sm:pt-20"
         >
-          {/* Hero backdrop (Req 8 / B5). Selected by the deterministic
-              Hero_Ladder (`selectActiveHeroTier`, Req 3.1–3.4): the WebGL 3D
-              hero (`VITE_HERO_MODE=webgl` + WebGL available) sits atop a
-              capability ladder that falls through to the looping Monte-Carlo
-              video (dark theme) / the self-hosted brand canvas cloud (light
-              theme); when `VITE_SPLINE_SCENE_URL` is set and Hero_Mode is unset,
-              the Spline 3D scene is used instead. All tiers carry their own
-              static brand-gradient fallback, honour reduced motion, and stay
-              inside this `isolate` slot so the `-z-10` backdrop paints behind
-              the hero text (Req 3.5, 6.1–6.3). */}
-          {heroTier === 'webgl' ? (
-            <WebglHero active />
-          ) : heroTier === 'spline' ? (
-            <SplineHero />
-          ) : heroTier === 'video' ? (
-            <VideoHero />
-          ) : (
-            <BrandHero />
-          )}
+          {/* faint instrument graticule, behind everything */}
+          <div
+            className="subtle-grid pointer-events-none absolute inset-0 -z-10 opacity-60"
+            aria-hidden="true"
+          />
+          <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[1fr_1.05fr]">
+            <div className="text-center lg:text-left">
+              <div className="t-eyebrow panel-enter panel-enter-1 mb-5 inline-flex items-center gap-2 text-[var(--accent-mint)]">
+                <Trophy className="h-3.5 w-3.5" />
+                For funded &amp; prop-challenge traders
+              </div>
 
-          <div className="mx-auto max-w-3xl text-center">
-            <div className="badge badge-blue panel-enter panel-enter-1 mb-6 inline-flex items-center gap-1.5">
-              <Trophy className="h-3 w-3" />
-              FOR FUNDED & PROP-CHALLENGE TRADERS
+              <h1
+                id="hero-heading"
+                className="panel-enter panel-enter-2 mb-5 font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl"
+              >
+                Will you pass your prop challenge,
+                <span className="text-[var(--accent-mint)]"> and is your edge real?</span>
+              </h1>
+
+              <p className="panel-enter panel-enter-3 mx-auto mb-8 max-w-xl text-base leading-relaxed text-[var(--text-secondary)] lg:mx-0">
+                Your backtest looked great. Here&apos;s the truth on the trades it never saw. Upload
+                your trade tape and we model your in-sample edge against a true out-of-sample holdout.
+              </p>
+
+              <div className="panel-enter panel-enter-4 flex flex-col items-center justify-center gap-3 sm:flex-row lg:justify-start">
+                <PrimaryCta label="Analyze my trade tape" />
+                <ReserveCta />
+              </div>
             </div>
 
-            <h1
-              id="hero-heading"
-              className="panel-enter panel-enter-2 mb-5 font-display text-4xl font-semibold leading-tight tracking-tight sm:text-5xl"
-            >
-              <span className="gradient-text">Will you pass your prop challenge</span>
-              <span className="text-[var(--text-primary)]"> — and is your edge real?</span>
-            </h1>
-
-            <p className="panel-enter panel-enter-3 mx-auto mb-8 max-w-2xl text-base leading-relaxed text-[var(--text-secondary)]">
-              Your backtest looked great. Here&apos;s the truth on the trades it never saw. Upload
-              your trade tape and we model your in-sample edge against a true out-of-sample holdout.
-            </p>
-
-            <div className="panel-enter panel-enter-4 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <PrimaryCta label="Analyze my trade tape" />
-              <ReserveCta />
-            </div>
-
-            {/* Honest before → after illustration. */}
-            <div className="panel-enter panel-enter-5 mt-12">
-              <div className="mb-3 flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
-                Illustrative example — not a guarantee
+            {/* The live instrument — interactive FAIL / PASS / MARGINAL example tape. */}
+            <div className="panel-enter panel-enter-3">
+              <div className="bench-root" data-bench-theme={resolved} style={{ background: 'transparent' }}>
+                <EdgeScopeHero />
               </div>
-              <div className="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-[1fr_auto_1fr]">
-                <BeforeAfterCard
-                  label="In-sample (backtest)"
-                  value="+$42 / trade"
-                  caption="What the curve-fit history showed."
-                  tone="green"
-                  icon={TrendingUp}
-                />
-                <div className="flex items-center justify-center text-[var(--text-secondary)]">
-                  <ArrowRight className="h-5 w-5 rotate-90 sm:rotate-0" />
-                </div>
-                <BeforeAfterCard
-                  label="Out-of-sample (reality)"
-                  value="−$11 / trade"
-                  caption="What trades it never saw can look like."
-                  tone="red"
-                  icon={TrendingDown}
-                />
-              </div>
+              <p className="t-label mt-3 text-center text-[var(--text-secondary)] lg:text-right">
+                Illustrative example, not a guarantee
+              </p>
             </div>
           </div>
         </section>
@@ -214,56 +125,99 @@ export function Marketing(): ReactElement {
           <div className="divider-gradient" />
         </div>
 
-        {/* ── 3. What it does ── */}
+        {/* ── 3. Three answers — asymmetric, each carries its own readout ── */}
         <section aria-labelledby="what-heading" className="px-6 py-20">
           <div className="mx-auto max-w-6xl">
             <div id="what-heading">
-              <SectionHeading
-                eyebrow="What it does"
-                title="Three answers, straight from your own trades"
-              />
+              <SectionHeading title="Three answers, straight from your own trades" />
             </div>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              {FEATURES.map((f, i) => (
-                <Fragment key={f.title}>
-                  <InfoCard
-                    icon={f.icon}
-                    title={f.title}
-                    body={f.body}
-                    accentText={ACCENT[f.accent].text}
-                    accentBorder={ACCENT[f.accent].border}
-                    delayClass={`panel-enter-${i + 1}`}
-                  />
-                </Fragment>
-              ))}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.3fr_1fr]">
+              {/* Large tile — edge reality check, with its in/out trace */}
+              <div className="glass-card panel-enter panel-enter-1 flex flex-col p-6 sm:p-7">
+                <span className="t-label text-[var(--accent-mint)]">Edge reality check</span>
+                <div className="my-6">
+                  <EdgeTrace />
+                </div>
+                <h3 className="font-display text-xl font-semibold tracking-tight text-[var(--text-primary)]">
+                  Is your edge real, or did the backtest just get lucky?
+                </h3>
+                <p className="mt-2 max-w-prose text-sm leading-relaxed text-[var(--text-secondary)]">
+                  A walk-forward out-of-sample test on a 70/30 holdout puts your in-sample edge
+                  against trades it never saw.
+                </p>
+              </div>
+
+              {/* Right column — two stacked readouts */}
+              <div className="grid grid-cols-1 gap-4">
+                <div className="glass-card panel-enter panel-enter-2 flex flex-col p-6">
+                  <span className="t-label text-[var(--accent-mint)]">Pass probability</span>
+                  <div className="mt-4">
+                    <PassGauge pct={86} />
+                  </div>
+                  <p className="mt-4 text-sm leading-relaxed text-[var(--text-secondary)]">
+                    Thousands of simulated challenge runs: your odds of hitting target before max
+                    drawdown trips you out.
+                  </p>
+                </div>
+                <div className="glass-card panel-enter panel-enter-3 flex flex-col p-6">
+                  <span className="t-label text-[var(--accent-mint)]">Tail &amp; ruin risk</span>
+                  <div className="mt-4">
+                    <TailSpark />
+                  </div>
+                  <p className="mt-4 text-sm leading-relaxed text-[var(--text-secondary)]">
+                    EVT tail extrapolation and probability-of-ruin: how bad an unseen losing streak
+                    could really get.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* ── 4. How it works ── */}
+        {/* ── 4. How it works — signal path (CH-01 → CH-02 → CH-03) ── */}
         <section aria-labelledby="how-heading" className="px-6 py-20">
-          <div className="mx-auto max-w-6xl">
+          <div className="mx-auto max-w-5xl">
             <div id="how-heading">
-              <SectionHeading
-                eyebrow="How it works"
-                title="From CSV to a verdict in three steps"
+              <SectionHeading title="From CSV to a verdict in three steps" />
+            </div>
+            <ol className="relative grid grid-cols-1 gap-10 md:grid-cols-3 md:gap-6">
+              {/* connecting rail between channel nodes (desktop only) */}
+              <div
+                className="pointer-events-none absolute left-0 right-0 top-[6px] hidden h-px md:block"
+                style={{
+                  background:
+                    'linear-gradient(90deg, transparent, var(--glass-border-strong) 14%, var(--glass-border-strong) 86%, transparent)',
+                }}
+                aria-hidden="true"
               />
-            </div>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              {STEPS.map((s, i) => (
-                <Fragment key={s.title}>
-                  <InfoCard
-                    icon={s.icon}
-                    title={s.title}
-                    body={s.body}
-                    accentText="text-[var(--accent-blue)]"
-                    eyebrow={`Step ${i + 1}`}
-                    delayClass={`panel-enter-${i + 1}`}
-                  />
-                </Fragment>
-              ))}
-            </div>
-            <p className="mx-auto mt-8 max-w-2xl text-center text-xs leading-relaxed text-[var(--text-secondary)]">
+              {STEPS.map((s, i) => {
+                const Icon = s.icon;
+                const live = i === 1;
+                return (
+                  <li key={s.title} className={`panel-enter panel-enter-${i + 1} relative flex flex-col`}>
+                    <div className="flex items-center gap-3">
+                      <span
+                        className="relative z-[1] h-3.5 w-3.5 rounded-full"
+                        style={{
+                          background: live ? 'var(--accent-mint)' : 'var(--bg-elevated)',
+                          boxShadow: live
+                            ? '0 0 0 4px var(--bg-primary), 0 0 10px var(--accent-mint)'
+                            : 'inset 0 0 0 1px var(--glass-border-strong), 0 0 0 4px var(--bg-primary)',
+                        }}
+                        aria-hidden="true"
+                      />
+                      <span className="t-label text-[var(--text-secondary)]">CH-0{i + 1}</span>
+                    </div>
+                    <div className="mt-5 flex items-center gap-2">
+                      <Icon className="h-5 w-5 text-[var(--accent-mint)]" />
+                      <h3 className="text-base font-semibold text-[var(--text-primary)]">{s.title}</h3>
+                    </div>
+                    <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">{s.body}</p>
+                  </li>
+                );
+              })}
+            </ol>
+            <p className="mx-auto mt-12 max-w-2xl text-center text-xs leading-relaxed text-[var(--text-secondary)]">
               Built on real methodology: Monte-Carlo resampling, walk-forward out-of-sample
               validation, SR 11-7 model validation, and EVT tail analysis.
             </p>
@@ -274,27 +228,27 @@ export function Marketing(): ReactElement {
         <section aria-labelledby="pricing-heading" className="px-6 py-20">
           <div className="mx-auto max-w-2xl">
             <div id="pricing-heading">
-              <SectionHeading eyebrow="Pricing" title="Founding price, locked in" />
+              <SectionHeading title="Founding price, locked in" />
             </div>
-            <div className="glass-card panel-enter panel-enter-1 border border-[rgba(88,166,255,0.30)] p-8 text-center">
+            <div className="glass-card panel-enter panel-enter-1 border border-[rgba(70,230,200,0.30)] p-8 text-center">
               <div className="badge badge-blue mx-auto mb-4 inline-flex items-center gap-1.5">
                 <Lock className="h-3 w-3" />
                 EARLY ADOPTER
               </div>
               <h3 className="font-display text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
                 {isEarlyAccessEnabled
-                  ? 'Founding price — locked in for early adopters'
+                  ? 'Founding price, locked in for early adopters'
                   : 'Free during the demand probe'}
               </h3>
               <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-[var(--text-secondary)]">
                 {isEarlyAccessEnabled
-                  ? 'Reserve now to lock the founding rate before public launch. No fake countdowns, no anchoring — just an honest early-adopter price.'
+                  ? 'Reserve now to lock the founding rate before public launch. No fake countdowns, no anchoring, just an honest early-adopter price.'
                   : 'The analyzer is free to use while we gauge demand. Run your tape, no card required.'}
               </p>
               <ul className="mx-auto mt-6 grid max-w-md gap-2 text-left text-sm text-[var(--text-secondary)]">
                 <li className="flex items-start gap-2">
                   <Database className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent-blue)]" />
-                  Runs entirely in your browser — your trades stay on your machine.
+                  Runs entirely in your browser. Your trades stay on your machine.
                 </li>
                 <li className="flex items-start gap-2">
                   <Target className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent-blue)]" />
@@ -317,7 +271,7 @@ export function Marketing(): ReactElement {
         <section aria-labelledby="faq-heading" className="px-6 py-20">
           <div className="mx-auto max-w-3xl">
             <div id="faq-heading">
-              <SectionHeading eyebrow="FAQ" title="The questions that actually matter" />
+              <SectionHeading title="The questions that actually matter" />
             </div>
             <div className="grid grid-cols-1 gap-3">
               {FAQS.map((f) => (
@@ -345,8 +299,8 @@ export function Marketing(): ReactElement {
             </p>
           </div>
           <div className="mt-8 border-t border-[var(--border)] pt-6 text-xs text-[var(--text-secondary)]">
-            © {new Date().getFullYear()} Monte Carlo Backtest Analyzer. Modeled probabilities from
-            your own trades — for research and education.
+            © {new Date().getFullYear()} EdgeCheck. Modeled probabilities from
+            your own trades, for research and education.
           </div>
         </div>
       </footer>

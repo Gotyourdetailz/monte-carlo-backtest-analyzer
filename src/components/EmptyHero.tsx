@@ -1,6 +1,8 @@
 import { Upload, Trophy, Target, LineChart, ShieldAlert } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { EARLY_ACCESS_URL, isEarlyAccessEnabled, trackEvent } from '../config';
+import { useTheme } from '../theme/ThemeProvider';
+import { EdgeScopeHero } from './bench/EdgeScopeHero';
 
 type Props = {
   hasFile: boolean;
@@ -29,12 +31,13 @@ const FEATURES = [
 ];
 
 const ACCENT: Record<string, { border: string; text: string }> = {
-  blue:    { border: 'border-[rgba(88,166,255,0.30)]',  text: 'text-[var(--accent-blue)]' },
-  magenta: { border: 'border-[rgba(232,121,249,0.35)]', text: 'text-[var(--accent-magenta)]' },
-  amber:   { border: 'border-[rgba(210,153,34,0.30)]',  text: 'text-[var(--accent-amber)]' },
+  blue:    { border: 'border-[rgba(70,230,200,0.30)]', text: 'text-[var(--accent-mint)]' },
+  magenta: { border: 'border-[rgba(95,243,214,0.30)]', text: 'text-[var(--accent-mint-bright)]' },
+  amber:   { border: 'border-[rgba(205,161,60,0.30)]', text: 'text-[var(--accent-amber)]' },
 };
 
 export function EmptyHero({ hasFile, isPortfolio }: Props) {
+  const { resolved } = useTheme();
   return (
     <div className="relative min-h-[80vh] flex flex-col items-center justify-center px-6 overflow-hidden">
       <div className="relative z-10 flex flex-col items-center text-center max-w-3xl">
@@ -71,12 +74,22 @@ export function EmptyHero({ hasFile, isPortfolio }: Props) {
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => trackEvent('reserve_click', { source: 'hero' })}
-              className="panel-enter panel-enter-4 inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white"
-              style={{ background: 'var(--gradient-brand)' }}
+              className="panel-enter panel-enter-4 inline-flex items-center gap-2 rounded-lg bg-[var(--accent-mint)] px-4 py-2.5 text-sm font-semibold text-[var(--bg-primary)] transition-colors hover:bg-[var(--accent-mint-bright)]"
             >
               Reserve early access →
             </a>
           )}
+        </div>
+
+        {/* The live instrument — the cockpit's signature display. */}
+        <div className="panel-enter panel-enter-5 mb-12 w-full">
+          <div
+            className="bench-root"
+            data-bench-theme={resolved}
+            style={{ background: 'transparent' }}
+          >
+            <EdgeScopeHero />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">

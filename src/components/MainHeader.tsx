@@ -59,8 +59,7 @@ export function MainHeader({
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => trackEvent('reserve_click', { source: 'header' })}
-              className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold text-white"
-              style={{ background: 'var(--gradient-brand)' }}
+              className="inline-flex items-center gap-1.5 rounded-md bg-[var(--accent-mint)] px-3 py-1.5 text-xs font-semibold text-[var(--bg-primary)] transition-colors hover:bg-[var(--accent-mint-bright)]"
             >
               Reserve early access →
             </a>
@@ -70,14 +69,14 @@ export function MainHeader({
               <button
                 onClick={onExportPdf}
                 disabled={isExportingPdf}
-                className="flex items-center gap-2 text-xs font-semibold text-[var(--text-secondary)] hover:text-[#c9d1d9] pb-1 transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] pb-1 transition-colors disabled:opacity-50"
               >
                 <Download className="w-4 h-4" />
                 {isExportingPdf ? 'Generating PDF...' : 'Export PDF Report'}
               </button>
               <button
                 onClick={onDownloadCsv}
-                className="flex items-center gap-2 text-xs font-semibold text-[var(--text-secondary)] hover:text-[#c9d1d9] pb-3 transition-colors"
+                className="flex items-center gap-2 text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] pb-3 transition-colors"
               >
                 <Download className="w-4 h-4" />
                 Export Results (CSV)

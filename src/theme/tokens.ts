@@ -10,40 +10,98 @@
  * and text tokens diverge between dark and light.
  */
 
-/** Core color tokens for the default (dark) theme. */
+/**
+ * Core color tokens for the default (dark) theme — "Fluid Analytical".
+ *
+ * Atmospheric navy-charcoal surfaces, ONE scarce ion-mint product accent, and a
+ * dark luminous "screen" for data. Legacy accent KEY NAMES are intentionally
+ * preserved (so the ~20 existing panels need zero edits) but their VALUES are
+ * remapped: `--accent-blue` is now mint, and purple/magenta fold onto the mint
+ * family so no violet survives anywhere in the app.
+ */
 export const darkTokens: Readonly<Record<string, string>> = {
-  '--bg-primary': '#0a0e17',
-  '--bg-secondary': '#0d1117',
-  '--bg-card': '#161b22',
-  '--bg-elevated': '#1c2333',
-  '--border': '#30363d',
-  '--border-bright': '#58a6ff',
-  '--text-primary': '#e6edf3',
-  '--text-secondary': '#8b949e',
-  '--accent-blue': '#58a6ff',
-  '--accent-green': '#3fb950',
-  '--accent-red': '#f85149',
-  '--accent-amber': '#d29922',
-  '--accent-purple': '#d2a8ff',
-  '--accent-magenta': '#e879f9',
+  // ── Surfaces ──
+  '--bg-primary': '#0a0f14',
+  '--bg-secondary': '#0d141b',
+  '--bg-card': '#121a21',
+  '--bg-elevated': '#18222b',
+  // App backdrop: radial depth from the top-right (mirrors the cockpit variant).
+  '--bg-app': 'radial-gradient(circle at top right, #101b26, #0a0f14 52%, #080c10)',
+
+  // ── Hairlines ──
+  '--border': '#1d2731',
+  '--border-bright': '#46e6c8', // mint focus/active edge (was AI-blue)
+
+  // ── Text ──
+  '--text-primary': '#e8eef0',
+  '--text-secondary': '#94a39d',
+
+  // ── Accents (legacy keys preserved; values folded onto the mint family) ──
+  '--accent-blue': '#46e6c8', // ← now mint; the `--primary` alias points here
+  '--accent-green': '#5fb37a',
+  '--accent-red': '#d2544e',
+  '--accent-amber': '#cda13c',
+  '--accent-purple': '#5ff3d6', // remapped → bright mint
+  '--accent-magenta': '#46e6c8', // remapped → mint
+
+  // ── New named ion accents for the rebuilt shell/cockpit ──
+  '--accent-mint': '#46e6c8',
+  '--accent-mint-bright': '#8dffe5',
+
+  // ── Glass (white-alpha) shell surfaces + hairlines ──
+  '--glass-bg': 'rgba(255,255,255,0.02)',
+  '--glass-bg-strong': 'rgba(255,255,255,0.045)',
+  '--glass-border': 'rgba(255,255,255,0.07)',
+  '--glass-border-strong': 'rgba(255,255,255,0.14)',
+  '--grid-line': 'rgba(255,255,255,0.035)',
+
+  // ── The luminous "screen": always dark, even in light mode ──
+  '--screen-start': '#11150f',
+  '--screen-end': '#090b09',
+
+  // ── Instrument trace colours (bright phosphor for CRT data) ──
+  '--trace-pass': '#6fe39a',
+  '--trace-fail': '#ff6457',
+  '--trace-marginal': '#f4c257',
 };
 
-/** Core color tokens for the light theme. Accent hues match `darkTokens`. */
+/** Core color tokens for the light theme ("bone / paper"). Keys MUST match `darkTokens`. */
 export const lightTokens: Readonly<Record<string, string>> = {
-  '--bg-primary': '#ffffff',
-  '--bg-secondary': '#f6f8fa',
-  '--bg-card': '#ffffff',
-  '--bg-elevated': '#eff2f5',
-  '--border': '#d0d7de',
-  '--border-bright': '#0969da',
-  '--text-primary': '#1f2328',
-  '--text-secondary': '#5a6470',
-  '--accent-blue': '#58a6ff',
-  '--accent-green': '#3fb950',
-  '--accent-red': '#f85149',
-  '--accent-amber': '#d29922',
-  '--accent-purple': '#d2a8ff',
-  '--accent-magenta': '#e879f9',
+  '--bg-primary': '#eae7de',
+  '--bg-secondary': '#f2efe7',
+  '--bg-card': '#f7f5ef',
+  '--bg-elevated': '#ffffff',
+  '--bg-app': 'radial-gradient(circle at top right, #f3f0e8, #eae7de 55%, #e2ded2)',
+
+  '--border': '#d7d2c5',
+  '--border-bright': '#07a589',
+
+  '--text-primary': '#1a1b17',
+  '--text-secondary': '#5b5e54',
+
+  '--accent-blue': '#07a589', // mint, darkened for AA on bone
+  '--accent-green': '#2f8f57',
+  '--accent-red': '#c0392f',
+  '--accent-amber': '#9a7414',
+  '--accent-purple': '#0bbf9e',
+  '--accent-magenta': '#07a589',
+
+  '--accent-mint': '#07a589',
+  '--accent-mint-bright': '#0bbf9e',
+
+  '--glass-bg': 'rgba(255,255,255,0.55)',
+  '--glass-bg-strong': 'rgba(255,255,255,0.78)',
+  '--glass-border': 'rgba(40,38,30,0.10)',
+  '--glass-border-strong': 'rgba(40,38,30,0.20)',
+  '--grid-line': 'rgba(40,38,30,0.06)',
+
+  // Screen stays dark even in light mode (locked principle: "a screen is a screen").
+  '--screen-start': '#11150f',
+  '--screen-end': '#090b09',
+
+  '--trace-pass': '#2f8f57',
+  '--trace-fail': '#c0392f',
+  '--trace-marginal': '#9a7414',
 };
 
 /**
@@ -123,7 +181,7 @@ export const semanticAliases: Readonly<Record<string, string>> = {
   '--secondary-foreground': 'var(--text-primary)',
   '--muted': 'var(--bg-secondary)',
   '--muted-foreground': 'var(--text-secondary)',
-  '--accent': 'var(--accent-magenta)',
+  '--accent': 'var(--accent-mint)',
   '--accent-foreground': 'var(--bg-primary)',
   '--destructive': 'var(--accent-red)',
   '--destructive-foreground': '#ffffff',
@@ -132,6 +190,6 @@ export const semanticAliases: Readonly<Record<string, string>> = {
   '--radius': '0.5rem',
 };
 
-/** Brand gradient referencing accent tokens (mode-agnostic). */
+/** Brand gradient referencing accent tokens (mode-agnostic). Mint → bright mint. */
 export const gradientBrand =
-  'linear-gradient(135deg, var(--accent-blue), var(--accent-magenta))';
+  'linear-gradient(135deg, var(--accent-mint), var(--accent-mint-bright))';

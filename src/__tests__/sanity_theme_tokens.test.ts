@@ -34,15 +34,21 @@ console.log(`\n[sanity_theme_tokens] reading ${themeCssPath}`);
 
 const css = readFileSync(themeCssPath, 'utf8');
 
-// Allow optional whitespace after the colon (e.g. "--accent-blue: #58a6ff").
+// Fluid Analytical cutover: the product accent is ion-mint; legacy key names
+// are preserved but their values fold onto the mint family (no AI-blue/violet).
 check(
-  'theme.css defines --accent-blue: #58a6ff',
-  /--accent-blue:\s*#58a6ff/.test(css),
+  'theme.css defines --accent-blue: #46e6c8 (ion mint)',
+  /--accent-blue:\s*#46e6c8/.test(css),
 );
 
 check(
-  'theme.css defines --accent-magenta: #e879f9',
-  /--accent-magenta:\s*#e879f9/.test(css),
+  'theme.css defines --accent-magenta: #46e6c8 (remapped to mint)',
+  /--accent-magenta:\s*#46e6c8/.test(css),
+);
+
+check(
+  'theme.css defines --accent-mint: #46e6c8',
+  /--accent-mint:\s*#46e6c8/.test(css),
 );
 
 check(
