@@ -6,6 +6,7 @@ import type { ModelValidationReport, TestVerdict } from './modelValidation';
 import type { EVTReport } from './evt';
 import type { AttributionReport } from './benchmarkAttribution';
 import type { TimestampAnalyticsReport } from './timestampAnalytics';
+import type { WalkForwardReport } from './walkForward';
 
 const styles = StyleSheet.create({
   page: {
@@ -23,7 +24,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 700,
-    color: '#58a6ff',
+    color: '#46e6c8',
     marginBottom: 8,
   },
   subtitle: {
@@ -113,7 +114,7 @@ const styles = StyleSheet.create({
   pillGreen: { backgroundColor: '#3fb950' },
   pillAmber: { backgroundColor: '#d29922' },
   pillRed: { backgroundColor: '#f85149' },
-  pillBlue: { backgroundColor: '#58a6ff' },
+  pillBlue: { backgroundColor: '#46e6c8' },
   rowBetween: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -430,6 +431,53 @@ const AttributionSection: React.FC<{ a: AttributionReport }> = ({ a }) => {
   );
 };
 
+const WalkForwardSection: React.FC<{ w: WalkForwardReport }> = ({ w }) => (
+  <View>
+    <View style={styles.rowBetween}>
+      <Text style={styles.sectionTitle}>Walk-Forward / Out-of-Sample Validation</Text>
+      <Text style={verdictPillStyle(w.verdict)}>{verdictLabel(w.verdict)}</Text>
+    </View>
+    <Text style={[styles.noteText, { marginBottom: 10 }]}>
+      Train {w.trainSize} -&gt; Test {w.oosSize}. {pdfSafe(w.note)}
+    </Text>
+
+    <View style={[styles.metricsGrid, { marginBottom: 6 }]}>
+      <View style={styles.smallStat}>
+        <Text style={styles.smallStatLabel}>OOS breach rate</Text>
+        <Text style={styles.smallStatValue}>{(w.breachRate * 100).toFixed(1)}%</Text>
+      </View>
+      <View style={styles.smallStat}>
+        <Text style={styles.smallStatLabel}>Expected</Text>
+        <Text style={styles.smallStatValue}>{(w.expectedBreachRate * 100).toFixed(1)}%</Text>
+      </View>
+      <View style={styles.smallStat}>
+        <Text style={styles.smallStatLabel}>Kupiec p</Text>
+        <Text style={styles.smallStatValue}>{fmtP(w.kupiecPValue)}</Text>
+      </View>
+      <View style={styles.smallStat}>
+        <Text style={styles.smallStatLabel}>PIT p</Text>
+        <Text style={styles.smallStatValue}>{fmtP(w.pitPValue)}</Text>
+      </View>
+      <View style={styles.smallStat}>
+        <Text style={styles.smallStatLabel}>KS p</Text>
+        <Text style={styles.smallStatValue}>{fmtP(w.ksPValue)}</Text>
+      </View>
+      <View style={styles.smallStat}>
+        <Text style={styles.smallStatLabel}>Train mean</Text>
+        <Text style={styles.smallStatValue}>${w.trainMean.toFixed(0)}</Text>
+      </View>
+      <View style={styles.smallStat}>
+        <Text style={styles.smallStatLabel}>OOS mean</Text>
+        <Text style={styles.smallStatValue}>${w.oosMean.toFixed(0)}</Text>
+      </View>
+      <View style={styles.smallStat}>
+        <Text style={styles.smallStatLabel}>Train / OOS sigma</Text>
+        <Text style={styles.smallStatValue}>${w.trainStd.toFixed(0)} / ${w.oosStd.toFixed(0)}</Text>
+      </View>
+    </View>
+  </View>
+);
+
 const TimestampSection: React.FC<{ t: TimestampAnalyticsReport; dailyLossLimit?: number }> = ({ t, dailyLossLimit }) => {
   const breaches = dailyLossLimit && dailyLossLimit > 0 ? t.estimatedDailyLimitBreaches(dailyLossLimit) : null;
   return (
@@ -538,11 +586,11 @@ const PdfDocument = ({ resultsMap, imagesMap, dailyLossLimit }: PdfDocumentProps
       {/* Cover Page */}
       <Page size="A4" style={styles.page}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ fontSize: 36, color: '#58a6ff', fontWeight: 700, marginBottom: 20 }}>
+          <Text style={{ fontSize: 36, color: '#46e6c8', fontWeight: 700, marginBottom: 20 }}>
             Institutional Tear Sheet
           </Text>
           <Text style={{ fontSize: 16, color: '#8b949e', marginBottom: 40 }}>
-            Monte Carlo Backtest Analyzer
+            EdgeCheck
           </Text>
           <Text style={{ fontSize: 12, color: '#e6edf3', marginBottom: 10 }}>Included Models:</Text>
           {models.map((m) => (
@@ -612,7 +660,7 @@ const PdfDocument = ({ resultsMap, imagesMap, dailyLossLimit }: PdfDocumentProps
             <Text
               style={styles.footer}
               render={({ pageNumber, totalPages }) =>
-                `Monte Carlo Backtest Analyzer | Page ${pageNumber} of ${totalPages}`
+                `EdgeCheck | Page ${pageNumber} of ${totalPages}`
               }
               fixed
             />
@@ -628,11 +676,12 @@ const PdfDocument = ({ resultsMap, imagesMap, dailyLossLimit }: PdfDocumentProps
                 <Text style={styles.subtitle}>SR 11-7 style diagnostics + EVT loss-tail analysis</Text>
               </View>
               {results.modelValidation && <ValidationSection v={results.modelValidation} />}
+              {results.walkForward && <WalkForwardSection w={results.walkForward} />}
               {results.evt && <EVTSection e={results.evt} />}
               <Text
                 style={styles.footer}
                 render={({ pageNumber, totalPages }) =>
-                  `Monte Carlo Backtest Analyzer | Page ${pageNumber} of ${totalPages}`
+                  `EdgeCheck | Page ${pageNumber} of ${totalPages}`
                 }
                 fixed
               />
@@ -655,7 +704,7 @@ const PdfDocument = ({ resultsMap, imagesMap, dailyLossLimit }: PdfDocumentProps
               <Text
                 style={styles.footer}
                 render={({ pageNumber, totalPages }) =>
-                  `Monte Carlo Backtest Analyzer | Page ${pageNumber} of ${totalPages}`
+                  `EdgeCheck | Page ${pageNumber} of ${totalPages}`
                 }
                 fixed
               />
@@ -669,6 +718,50 @@ const PdfDocument = ({ resultsMap, imagesMap, dailyLossLimit }: PdfDocumentProps
   );
 };
 
+/**
+ * Renders an institutional-grade vector PDF report for the selected
+ * simulation models and triggers a browser download.
+ *
+ * Inputs:
+ * - `selectedModels: string[]` — model keys to include (subset of
+ *   `'basic' | 'regime' | 'parametric' | 'portfolio' | 'garch'`,
+ *   matching the `resultsHistory` map). Determines both the chart
+ *   captures performed and the pages emitted.
+ * - `resultsHistory: Record<string, SimulationResults>` — the per-model
+ *   results map from `App.tsx`. Models in `selectedModels` that are
+ *   missing from this map are silently skipped.
+ * - `filename` — output download filename (default
+ *   `'Institutional_Report.pdf'`).
+ * - `dailyLossLimit?` — optional prop-firm daily-loss threshold passed
+ *   through to the timestamp-analytics section for highlight rendering.
+ *
+ * Output:
+ * - Returns `Promise<void>`. The PDF Blob is built via `@react-pdf/renderer`
+ *   and a download is triggered through an injected `<a>` element; the
+ *   resulting blob URL is revoked before resolution.
+ *
+ * Ordering guarantees:
+ * - Pages are emitted in `selectedModels` order.
+ * - Per-model chart captures (`spaghetti`, `dist-balance`, `dist-dd`) are
+ *   read from DOM elements with id `capture-${modelKey}-...` in that
+ *   fixed order so the layout is stable across runs.
+ *
+ * Side effects:
+ * - Reads chart DOM elements via `document.getElementById` and
+ *   rasterizes each through `html2canvas` (any failure is caught and
+ *   logged as a `console.warn`; that model's images degrade to empty
+ *   strings rather than aborting the export).
+ * - Builds the PDF via `@react-pdf/renderer`'s `pdf(...).toBlob()`.
+ * - Mutates the DOM transiently: appends an `<a>` element, calls
+ *   `link.click()`, then removes it and revokes the object URL.
+ * - **Does NOT** read or write IndexedDB. The audit log is owned by
+ *   `runHistory.ts`; this entry point only renders a PDF from results
+ *   already in memory.
+ *
+ * Browser-only: relies on `document`, `URL.createObjectURL`,
+ * `html2canvas`, and `@react-pdf/renderer`. Not safe to call from a
+ * worker or Node context.
+ */
 export async function exportToVectorPDF(
   selectedModels: string[],
   resultsHistory: Record<string, SimulationResults>,

@@ -1,4 +1,6 @@
 import type { AttributionReport } from '../benchmarkAttribution';
+import { Stat } from './_shared/Stat';
+import { cn } from '../lib/utils';
 
 type Props = {
   attribution: AttributionReport;
@@ -18,13 +20,13 @@ export function AttributionPanel({ attribution }: Props) {
   const sig = attribution.alphaPValue != null && attribution.alphaPValue < 0.05;
 
   return (
-    <div className="glass-card animate-fade-in-up overflow-hidden">
-      <div className="px-6 py-4 border-b border-[#30363d]/50 flex items-center justify-between flex-wrap gap-2">
+    <div className="glass-card panel-enter overflow-hidden">
+      <div className="px-6 py-4 border-b border-[var(--border)]/50 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <span className="text-[10px] text-[var(--accent-blue)] uppercase font-bold tracking-wider">
             Benchmark Attribution
           </span>
-          <span className={`badge ${sig ? 'badge-green' : 'badge-amber'}`}>
+          <span className={cn('badge', sig ? 'badge-green' : 'badge-amber')}>
             {sig ? 'Alpha statistically significant' : 'Alpha not significant'}
           </span>
         </div>
@@ -82,12 +84,4 @@ export function AttributionPanel({ attribution }: Props) {
   );
 }
 
-function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <div>
-      <div className="text-[10px] uppercase tracking-wider text-[var(--text-secondary)] font-semibold mb-1">{label}</div>
-      <div className="metric-value text-[var(--text-primary)] text-base">{value}</div>
-      {hint && <div className="text-[10px] text-[var(--text-secondary)] opacity-60 mt-0.5">{hint}</div>}
-    </div>
-  );
-}
+

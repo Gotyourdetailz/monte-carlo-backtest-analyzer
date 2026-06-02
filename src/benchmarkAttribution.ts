@@ -247,3 +247,233 @@ function pearson(a: number[], b: number[]): number {
   }
   return da > 0 && db > 0 ? num / Math.sqrt(da * db) : 0;
 }
+
+// ─── Multi-factor regression (HC0) ──────────────────────────────────────────
+
+export type FactorEstimate = {
+  name: string;
+  coefficient: number;
+  stdErr: number;
+  tStat: number;
+  pValue: number;
+};
+
+export type MultiFactorReport = {
+  alpha: number;
+  alphaStdErr: number;
+  alphaT: number;
+  alphaPValue: number;
+  /** Annualised intercept. */
+  alphaAnnualized: number;
+  factors: FactorEstimate[];
+  rSquared: number;
+  adjRSquared: number;
+  /** Annualised tracking error vs the residual (factor-neutral risk). */
+  residualVolAnnualized: number;
+  observations: number;
+  periodsPerYear: number;
+};
+
+/**
+ * OLS regression of y on (1, x_1, ..., x_k) with HC0 robust SEs.
+ *
+ * Solves (X' X) b = X' y via Gauss-Jordan elimination on the augmented
+ * matrix.  For our intended use (k <= 8 factors, n in the hundreds to
+ * low thousands), the cost is negligible and we avoid pulling in a
+ * matrix library.
+ */
+function solveLinearSystem(A: number[][], b: number[]): number[] | null {
+  const n = A.length;
+  // augment
+  const M: number[][] = A.map((row, i) => [...row, b[i]]);
+  for (let col = 0; col < n; col++) {
+    // pivot: largest absolute value in this column at or below diagonal
+    let pivotRow = col;
+    let pivotVal = Math.abs(M[col][col]);
+    for (let r = col + 1; r < n; r++) {
+      if (Math.abs(M[r][col]) > pivotVal) {
+        pivotVal = Math.abs(M[r][col]);
+        pivotRow = r;
+      }
+    }
+    if (pivotVal < 1e-12) return null; // singular
+    if (pivotRow !== col) {
+      const tmp = M[col]; M[col] = M[pivotRow]; M[pivotRow] = tmp;
+    }
+    // eliminate
+    const piv = M[col][col];
+    for (let r = 0; r < n; r++) {
+      if (r === col) continue;
+      const factor = M[r][col] / piv;
+      if (factor === 0) continue;
+      for (let c = col; c <= n; c++) M[r][c] -= factor * M[col][c];
+    }
+  }
+  // normalise
+  const x = new Array(n);
+  for (let i = 0; i < n; i++) x[i] = M[i][n] / M[i][i];
+  return x;
+}
+
+function invert(A: number[][]): number[][] | null {
+  const n = A.length;
+  const M: number[][] = A.map((row) => [...row, ...new Array(n).fill(0)]);
+  for (let i = 0; i < n; i++) M[i][n + i] = 1;
+  for (let col = 0; col < n; col++) {
+    let pivotRow = col;
+    let pivotVal = Math.abs(M[col][col]);
+    for (let r = col + 1; r < n; r++) {
+      if (Math.abs(M[r][col]) > pivotVal) { pivotVal = Math.abs(M[r][col]); pivotRow = r; }
+    }
+    if (pivotVal < 1e-12) return null;
+    if (pivotRow !== col) { const tmp = M[col]; M[col] = M[pivotRow]; M[pivotRow] = tmp; }
+    const piv = M[col][col];
+    for (let c = 0; c < 2 * n; c++) M[col][c] /= piv;
+    for (let r = 0; r < n; r++) {
+      if (r === col) continue;
+      const factor = M[r][col];
+      if (factor === 0) continue;
+      for (let c = 0; c < 2 * n; c++) M[r][c] -= factor * M[col][c];
+    }
+  }
+  return M.map((row) => row.slice(n));
+}
+
+/**
+ * Multi-factor regression. `factorMatrix[i]` is the i-th observation's
+ * factor row (length k). `factorNames[j]` labels the j-th coefficient.
+ */
+export function regressMultiFactorWithRobustSE(
+  y: number[],
+  factorMatrix: number[][],
+  factorNames: string[]
+): MultiFactorReport | null {
+  const n = y.length;
+  const k = factorNames.length;
+  if (n < k + 5 || factorMatrix.length !== n) return null;
+  for (const row of factorMatrix) if (row.length !== k) return null;
+
+  // Build X with intercept
+  const X: number[][] = factorMatrix.map((row) => [1, ...row]);
+  const p = k + 1;
+
+  // X'X
+  const XtX: number[][] = Array.from({ length: p }, () => new Array(p).fill(0));
+  const Xty: number[] = new Array(p).fill(0);
+  for (let i = 0; i < n; i++) {
+    const xi = X[i];
+    for (let a = 0; a < p; a++) {
+      Xty[a] += xi[a] * y[i];
+      for (let b = a; b < p; b++) {
+        XtX[a][b] += xi[a] * xi[b];
+      }
+    }
+  }
+  // mirror
+  for (let a = 0; a < p; a++) for (let b = 0; b < a; b++) XtX[a][b] = XtX[b][a];
+
+  const beta = solveLinearSystem(
+    XtX.map((r) => [...r]),
+    [...Xty]
+  );
+  if (!beta) return null;
+
+  // Residuals
+  const e: number[] = new Array(n);
+  let rss = 0;
+  let mean = 0;
+  for (let i = 0; i < n; i++) mean += y[i];
+  mean /= n;
+  let tss = 0;
+  for (let i = 0; i < n; i++) {
+    let yhat = 0;
+    for (let a = 0; a < p; a++) yhat += X[i][a] * beta[a];
+    e[i] = y[i] - yhat;
+    rss += e[i] * e[i];
+    tss += (y[i] - mean) ** 2;
+  }
+  const r2 = tss > 0 ? 1 - rss / tss : 0;
+  const adjR2 = n - p > 0 ? 1 - (1 - r2) * (n - 1) / (n - p) : r2;
+
+  // HC0 sandwich: V = (X'X)^-1 (sum e^2 x x') (X'X)^-1
+  const XtXInv = invert(XtX);
+  if (!XtXInv) return null;
+
+  const meat: number[][] = Array.from({ length: p }, () => new Array(p).fill(0));
+  for (let i = 0; i < n; i++) {
+    const u = e[i] * e[i];
+    const xi = X[i];
+    for (let a = 0; a < p; a++) {
+      for (let b = 0; b < p; b++) {
+        meat[a][b] += u * xi[a] * xi[b];
+      }
+    }
+  }
+
+  // V = XtXInv * meat * XtXInv
+  const tmp: number[][] = Array.from({ length: p }, () => new Array(p).fill(0));
+  for (let a = 0; a < p; a++) for (let b = 0; b < p; b++) {
+    let s = 0;
+    for (let c = 0; c < p; c++) s += XtXInv[a][c] * meat[c][b];
+    tmp[a][b] = s;
+  }
+  const V: number[][] = Array.from({ length: p }, () => new Array(p).fill(0));
+  for (let a = 0; a < p; a++) for (let b = 0; b < p; b++) {
+    let s = 0;
+    for (let c = 0; c < p; c++) s += tmp[a][c] * XtXInv[c][b];
+    V[a][b] = s;
+  }
+
+  const seCoeff = new Array(p).fill(0).map((_, i) => (V[i][i] > 0 ? Math.sqrt(V[i][i]) : NaN));
+
+  // Build factor estimates
+  const factors: FactorEstimate[] = factorNames.map((name, j) => {
+    const coef = beta[j + 1];
+    const se = seCoeff[j + 1];
+    const t = se ? coef / se : NaN;
+    return {
+      name,
+      coefficient: coef,
+      stdErr: se,
+      tStat: t,
+      pValue: twoSidedNormalPValue(t),
+    };
+  });
+
+  // Periods/year is up to caller — let them pass it in via wrapper.
+  // Residual vol from RSS / (n - p)
+  const sigma2 = (n - p) > 0 ? rss / (n - p) : 0;
+  const sigmaRes = Math.sqrt(Math.max(0, sigma2));
+
+  const alphaT = seCoeff[0] ? beta[0] / seCoeff[0] : NaN;
+  return {
+    alpha: beta[0],
+    alphaStdErr: seCoeff[0],
+    alphaT,
+    alphaPValue: twoSidedNormalPValue(alphaT),
+    alphaAnnualized: 0, // wrapper fills in
+    factors,
+    rSquared: r2,
+    adjRSquared: adjR2,
+    residualVolAnnualized: sigmaRes, // wrapper fills annualisation
+    observations: n,
+    periodsPerYear: 0, // wrapper fills
+  };
+}
+
+/** User-facing wrapper that handles annualisation. */
+export function buildMultiFactorReport(
+  strategyReturns: number[],
+  factorMatrix: number[][],
+  factorNames: string[],
+  periodsPerYear: number
+): MultiFactorReport | null {
+  const r = regressMultiFactorWithRobustSE(strategyReturns, factorMatrix, factorNames);
+  if (!r) return null;
+  return {
+    ...r,
+    alphaAnnualized: r.alpha * periodsPerYear,
+    residualVolAnnualized: r.residualVolAnnualized * Math.sqrt(periodsPerYear),
+    periodsPerYear,
+  };
+}

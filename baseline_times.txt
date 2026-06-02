@@ -1,0 +1,5 @@
+﻿property_subseed_derivation = 4615ms
+property_decomposition_equivalence = 4629ms
+property_studentTCdf = 4684ms
+property_compare_reproducibility = 895ms
+property_retention_and_histogram = 4544ms

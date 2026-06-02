@@ -1,6 +1,15 @@
-import React, { useState } from 'react';
-import { X, FileText, CheckCircle2 } from 'lucide-react';
+import { useState } from 'react';
+import { FileText, CheckCircle2 } from 'lucide-react';
 import { SimulationResults } from '../types';
+import { cn } from '../lib/utils';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from './ui/dialog';
+import { Button } from './ui/button';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -28,8 +37,6 @@ export function ExportModal({ isOpen, onClose, resultsHistory, onExport, isExpor
     return acc;
   });
 
-  if (!isOpen) return null;
-
   const handleToggle = (id: string) => {
     if (!resultsHistory[id]) return;
     setSelected(prev => ({ ...prev, [id]: !prev[id] }));
@@ -38,82 +45,77 @@ export function ExportModal({ isOpen, onClose, resultsHistory, onExport, isExpor
   const selectedCount = Object.values(selected).filter(Boolean).length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#0d1117] border border-[#30363d] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden glass-card animate-scale-in">
-        <div className="flex justify-between items-center px-6 py-4 border-b border-[#30363d]">
-          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-            <FileText className="w-5 h-5 text-[#58a6ff]" />
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="w-5 h-5 text-[var(--accent-blue)]" />
             Export Institutional Tear Sheet
-          </h3>
-          <button onClick={onClose} className="text-[#8b949e] hover:text-white transition-colors">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        
-        <div className="p-6">
-          <p className="text-sm text-[#8b949e] mb-4">
+          </DialogTitle>
+        </DialogHeader>
+
+        <div>
+          <p className="text-sm text-[var(--text-secondary)] mb-4">
             Select the backtest models to include in your PDF report. Models you haven't run yet are disabled.
           </p>
 
-          <div className="space-y-3 mb-6">
+          <div className="space-y-3 mb-2">
             {models.map(m => {
               const isAvailable = !!resultsHistory[m.id];
               const isSelected = selected[m.id];
-              
+
               return (
-                <label 
+                <label
                   key={m.id}
-                  className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
-                    !isAvailable 
-                      ? 'border-[#30363d]/50 bg-[#30363d]/20 opacity-50 cursor-not-allowed'
+                  className={cn(
+                    'flex items-center gap-3 p-3 rounded-xl border transition-all',
+                    !isAvailable
+                      ? 'border-[var(--border)]/50 bg-[var(--border)]/20 opacity-50 cursor-not-allowed'
                       : isSelected
-                        ? 'border-[#58a6ff] bg-[#58a6ff]/10 cursor-pointer shadow-[0_0_15px_rgba(88,166,255,0.1)]'
-                        : 'border-[#30363d] bg-[#161b22] cursor-pointer hover:border-[#8b949e]'
-                  }`}
+                        ? 'border-[var(--accent-mint)] bg-[var(--accent-mint)]/10 cursor-pointer shadow-[0_0_15px_rgba(70,230,200,0.1)]'
+                        : 'border-[var(--border)] bg-[var(--bg-elevated)] cursor-pointer hover:border-[var(--text-secondary)]',
+                  )}
                 >
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     className="hidden"
                     checked={isSelected}
                     onChange={() => handleToggle(m.id)}
                     disabled={!isAvailable}
                   />
-                  <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 border transition-colors ${
-                    isSelected ? 'bg-[#58a6ff] border-[#58a6ff]' : 'border-[#8b949e] bg-transparent'
-                  }`}>
-                    {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-[#0d1117]" />}
+                  <div className={cn(
+                    'w-5 h-5 rounded flex items-center justify-center shrink-0 border transition-colors',
+                    isSelected ? 'bg-[var(--accent-blue)] border-[var(--accent-blue)]' : 'border-[var(--text-secondary)] bg-transparent',
+                  )}>
+                    {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-[var(--bg-secondary)]" />}
                   </div>
-                  <span className={`font-medium ${!isAvailable ? 'text-[#8b949e]' : 'text-white'}`}>
+                  <span className={cn('font-medium', !isAvailable ? 'text-[var(--text-secondary)]' : 'text-[var(--text-primary)]')}>
                     {m.label}
                   </span>
                   {!isAvailable && (
-                    <span className="ml-auto text-xs text-[#8b949e]">Not run yet</span>
+                    <span className="ml-auto text-xs text-[var(--text-secondary)]">Not run yet</span>
                   )}
                 </label>
               );
             })}
           </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-[#30363d]">
-            <button 
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-semibold text-white bg-[#21262d] hover:bg-[#30363d] rounded-lg transition-colors"
-            >
-              Cancel
-            </button>
-            <button 
-              onClick={() => {
-                const keys = Object.keys(selected).filter(k => selected[k]);
-                onExport(keys);
-              }}
-              disabled={selectedCount === 0 || isExportingPdf}
-              className="px-4 py-2 text-sm font-semibold text-white bg-[#238636] hover:bg-[#2ea043] rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isExportingPdf ? 'Generating PDF...' : `Export PDF (${selectedCount} selected)`}
-            </button>
-          </div>
         </div>
-      </div>
-    </div>
+
+        <DialogFooter className="border-t border-[var(--border)] pt-4">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              const keys = Object.keys(selected).filter(k => selected[k]);
+              onExport(keys);
+            }}
+            disabled={selectedCount === 0 || isExportingPdf}
+          >
+            {isExportingPdf ? 'Generating PDF...' : `Export PDF (${selectedCount} selected)`}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

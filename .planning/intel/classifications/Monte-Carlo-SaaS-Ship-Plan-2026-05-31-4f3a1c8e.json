@@ -1,0 +1,13 @@
+{
+  "source_path": "C:/Users/demir/antigravity/Monte-Carlo-Backtest-Analyzer/docs/Monte-Carlo-SaaS-Ship-Plan-2026-05-31.md",
+  "type": "DOC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "Ship Plan — Prop-Trader Wedge + Full UI Revamp",
+  "summary": "Two-phase implementation/ship roadmap for a prop-trader Monte Carlo SaaS: Phase A wedge plus lean identity, Phase B full UI revamp, gated by a demand probe.",
+  "scope": ["Monte Carlo simulation engine", "prop-firm pass-probability", "walk-forward edge verdict", "Challenge Verdict hero card", "UI/design token + theme system", "shadcn/ui migration", "marketing/routing site", "Stripe Payment Link demand probe", "static Vite SPA deploy"],
+  "cross_refs": ["Monte-Carlo-Backtest-Simulator-Plan", "council-transcript-2026-05-31", ".kiro/specs/saas-ml-platform-revamp", "Institutional_Report-8.pdf", "C:\\Users\\demir\\.claude\\plans\\so-based-off-this-happy-moth.md", "src/App.tsx", "src/types.ts", "src/components/ChallengeVerdict.tsx", "src/components/ResultsView.tsx", "src/index.css", "src/config.ts", "index.html", "walkForward.ts", "simulationEngine.ts"],
+  "locked": false,
+  "precedence": null,
+  "notes": "Frontmatter declares type: implementation-plan (not in taxonomy). Document mixes locked product decisions (ADR-like), feature requirements/scope (PRD-like), and UI/design direction (SPEC-like), but its dominant structure is a phased roadmap/plan, so classified DOC. Synthesizer may wish to extract the 'Locked decisions' block as higher-precedence signals."
+}

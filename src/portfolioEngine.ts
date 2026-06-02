@@ -1,8 +1,9 @@
 import {
-  BaseModelConfig,
   DailyData,
   DataFormat,
   HistoricalStats,
+  MAX_STORED_PATHS,
+  PortfolioConfig,
   PortfolioRegimeBreakdown,
   PortfolioResampling,
   PortfolioStrategyMeta,
@@ -27,7 +28,7 @@ import {
   sampleNextRegime,
   drawDynamicCorrelatedReturnStep
 } from './dynamicCopula';
-import { calculateMaxDrawdown, createSeededRng, meanAndStdDev } from './mathUtils';
+import { calculateMaxDrawdown, createSeededRng, deriveSessionSeed, fnv1a32, generateRunId, meanAndStdDev } from './mathUtils';
 import { buildHistoricalPath, toReturnSeries } from './pathSimulator';
 import { computeInstitutionalMetrics } from './riskMetrics';
 import { computeHistoricalStats } from './simulationEngine';
@@ -198,17 +199,15 @@ function simulateIndependentPortfolioLegs(
   return paths;
 }
 
-export type PortfolioSimulationParams = BaseModelConfig & {
-  strategies: StrategyAllocation[];
-  dataFormat: DataFormat;
-  rowFrequency: RowFrequency;
-  periodsPerYear: number;
-  portfolioResampling?: PortfolioResampling;
-  /** True when each sleeve is the same CSV row index (multi-column); false for instrument-filtered logs */
-  portfolioAlignedRows?: boolean;
-  enablePortfolioRegimeBreakdown?: boolean;
-  onProgress?: (completed: number, total: number) => void;
-};
+/**
+ * Engine-side params alias for the portfolio arm of the `SimulationParams`
+ * discriminated union. The portfolio-specific fields (`strategies`,
+ * `copulaDf`, `portfolioResampling`, `portfolioAlignedRows`,
+ * `enablePortfolioRegimeBreakdown`) and the engine-only fields
+ * (`dataFormat`, `factorNames`, `onProgress`) already live on
+ * `PortfolioConfig` in `types.ts`.
+ */
+export type PortfolioSimulationParams = PortfolioConfig;
 
 async function buildPortfolioRegimeBreakdown(
   params: PortfolioSimulationParams,
@@ -233,12 +232,29 @@ async function buildPortfolioRegimeBreakdown(
 
     if (filtered.length < 2) continue;
 
+    /**
+     * Derive a deterministic, segment-distinct sub-seed (Requirement 9.6).
+     *
+     * Using the parent's `randomSeed` directly would force every per-regime
+     * sub-run to share the parent PRNG sequence, which (a) wastes the
+     * variance-reduction value of independent sub-streams and (b) couples
+     * sub-run output to the order in which segments are iterated. XOR-ing
+     * with a documented FNV-1a hash of the segment id gives each segment
+     * its own deterministic stream while preserving end-to-end
+     * reproducibility when `params.randomSeed` is fixed. When the parent
+     * seed is `null` (free-seed mode), the sub-run also runs free-seeded.
+     */
+    const subSeed = params.randomSeed != null
+      ? (params.randomSeed ^ fnv1a32(segId)) >>> 0
+      : null;
+
     const sub = await runPortfolioSimulation({
       ...params,
       strategies: filtered,
       nSimulations: regimeSims,
       enablePortfolioRegimeBreakdown: false,
       onProgress: undefined,
+      randomSeed: subSeed,
     });
 
     const pnls = sub.finalBalances.map((b) => b - params.startingCapital);
@@ -260,6 +276,75 @@ async function buildPortfolioRegimeBreakdown(
   return breakdown;
 }
 
+/**
+ * Multi-strategy portfolio Monte Carlo orchestrator. Combines per-leg
+ * historical PnL series under the configured `portfolioResampling` scheme
+ * (independent / Gaussian copula / Student-t copula / dynamic copula) and
+ * aggregates the leg paths into a single portfolio equity curve per
+ * simulation. Implemented entirely in TypeScript — there is no WASM
+ * dispatch on this path.
+ *
+ * Inputs (`PortfolioSimulationParams` = `PortfolioConfig`):
+ * - `strategies: StrategyAllocation[]` — at least 2 sleeves, each with
+ *   `id`, `name`, `weight`, and a per-row `data: DailyData[]` series.
+ *   Sleeve weights are normalized internally.
+ * - `nSimulations`, `nTrades`, `startingCapital`, `ruinThreshold`,
+ *   `commissionPerTrade` — scenario sizing.
+ * - `dataFormat` ∈ `'pct' | 'mult' | 'absolute'` — applied uniformly
+ *   to every sleeve.
+ * - `portfolioResampling` ∈ `'independent' | 'gaussian_copula' |
+ *   'student_t_copula' | 'dynamic_copula'`; `copulaDf` controls the
+ *   Student-t / dynamic copula degrees of freedom.
+ * - `portfolioAlignedRows` (default true) decides whether per-leg
+ *   resampling indices share a step or are drawn independently.
+ * - `enablePortfolioRegimeBreakdown` (default false) triggers a recursive
+ *   per-segment breakdown (uses deterministic FNV-1a sub-seeds derived
+ *   from `randomSeed`).
+ * - `randomSeed` is optional; when omitted, the engine derives one via
+ *   `deriveSessionSeed()` at run start so `runMeta.randomSeed` is never
+ *   null for a completed run (Requirement 9.3).
+ * - `onProgress?(completed, total)` — fired every `CHUNK_SIZE`
+ *   iterations and once on completion.
+ *
+ * Output (`SimulationResults`): same shape as `runSimulation`, with
+ * `modelType: 'portfolio'` and `portfolioMeta` populated. Notable fields:
+ * - `paths: number[][]` — sampled portfolio equity curves, capped at
+ *   `MAX_STORED_PATHS`.
+ * - `finalBalances`, `maxDrawdowns` — one entry per simulation, in
+ *   simulation order (the loop index).
+ * - `runMeta.prngFamily` is always `'mulberry32-ts'` on this path, since
+ *   randomness is generated entirely by `createSeededRng` (no WASM
+ *   kernel involvement).
+ * - `runMeta.kernelVersion` is `'pre-versioned'` (no kernel).
+ *
+ * Ordering guarantees:
+ * - For a fixed `randomSeed`, results are deterministic: the same RNG
+ *   stream is consumed by leg resampling, copula draws, and (when
+ *   enabled) the regime-breakdown recursion.
+ * - `paths[i]` is the i-th sampled simulation's equity curve, length
+ *   `nTrades + 1`, starting at `startingCapital`.
+ * - Per-leg input `data` row order is preserved when constructing each
+ *   sleeve's historical path; `combineLegPaths` aggregates legs at the
+ *   same time step.
+ *
+ * Side effects:
+ * - Pure with respect to module-level state.
+ * - Calls `onProgress` if supplied; awaits `yieldToEventLoop()` between
+ *   chunks so the worker can post progress messages.
+ * - May emit a deduplicated `console.warn` per run when the dynamic
+ *   copula falls back to an identity correlation matrix for any regime
+ *   (Requirement 4.8).
+ * - Recursively calls itself for per-segment breakdowns when
+ *   `enablePortfolioRegimeBreakdown` is true (with `onProgress: undefined`
+ *   on the inner calls).
+ * - **Does NOT** read or write IndexedDB. Persisting the result to the
+ *   audit log is the caller's responsibility — `App.tsx` invokes
+ *   `runHistory.recordRun(...)` after consuming the returned
+ *   `SimulationResults`.
+ *
+ * @throws {Error} when fewer than 2 sleeves are supplied, or when the
+ *   correlation matrix cannot be Cholesky-factored under a static copula.
+ */
 export async function runPortfolioSimulation(
   params: PortfolioSimulationParams
 ): Promise<SimulationResults> {
@@ -291,8 +376,14 @@ export async function runPortfolioSimulation(
   const copulaDfVal = params.copulaDf ?? 5;
 
   const CHUNK_SIZE = 500;
-  const MAX_STORED_PATHS = 200;
-  const rng = randomSeed != null ? createSeededRng(randomSeed) : Math.random;
+  /**
+   * Session-stable seed (Requirement 9.3, F-SD-10): when the caller has
+   * not supplied a fixed seed, derive one at run start so the audit log
+   * records the exact mulberry32 seed used by every leg-resampling step.
+   * `runMeta.randomSeed` is then never `null` for a completed run.
+   */
+  const effectiveSeed = randomSeed ?? deriveSessionSeed();
+  const rng = createSeededRng(effectiveSeed);
   const weights = normalizeWeights(strategies);
   const horizon = nTrades;
   const annualizationFactor =
@@ -303,10 +394,7 @@ export async function runPortfolioSimulation(
       data: st.data.slice(0, horizon),
       dataFormat,
       startingCapital: startingCapital * weights[i],
-      nTrades: horizon,
       commissionPerTrade,
-      samplingMode,
-      rng,
     })
   );
   const originalPath = combineLegPaths(legHistorical);
@@ -327,6 +415,16 @@ export async function runPortfolioSimulation(
       return strategies[0].data[t]?.segment || 'dispersed';
     });
     dynamicModel = buildDynamicCopulaModel(alignedPnls, regimeLabels);
+
+    // Deduplicated warning: emit a single console.warn per run listing
+    // every regime that fell back to identity (Requirement 4.8). The
+    // PortfolioRegimePanel renders the same list as visible pills.
+    if (dynamicModel.fallbackRegimes.length > 0) {
+      const uniqueFallbacks = Array.from(new Set(dynamicModel.fallbackRegimes));
+      console.warn(
+        `[dynamic-copula] Insufficient data — regime(s) fell back to independent (identity) correlation: ${uniqueFallbacks.join(', ')}`
+      );
+    }
   }
 
   const returnPools = strategies.map((st) => toReturnSeries(st.data, dataFormat));
@@ -450,9 +548,16 @@ export async function runPortfolioSimulation(
   );
 
   const runMeta: SimulationRunMeta = {
-    runId: `portfolio_${Date.now()}`,
+    runId: generateRunId('portfolio'),
     timestamp: new Date().toISOString(),
-    randomSeed: randomSeed ?? null,
+    // Persist the exact seed used (never `null` for a completed run —
+    // Requirement 9.3 / F-SD-10).
+    randomSeed: effectiveSeed,
+    // Portfolio runs persist `samplingMode` verbatim (Requirement 9.4):
+    // the portfolio path uses `portfolioResampling` (independent /
+    // gaussian / student_t / dynamic copula) rather than the single-
+    // strategy `samplingMode`, so the user-supplied value is recorded
+    // unchanged and no `effectiveSamplingMode` coercion is reported here.
     samplingMode,
     modelType: 'portfolio',
     nSimulations,
@@ -460,6 +565,17 @@ export async function runPortfolioSimulation(
     dataFormat,
     rowFrequency,
     commissionPerTrade,
+    // Portfolio simulation runs entirely on the TS side via mulberry32
+    // (`createSeededRng`); the WASM kernel is not invoked. Requirement 9.1.
+    prngFamily: 'mulberry32-ts',
+    // Portfolio runs do not invoke the WASM kernel, so there is no
+    // `kernel_version` to surface (Requirement 8.4 / task 8.12). Persist
+    // the documented sentinel `'pre-versioned'` so audit log consumers
+    // see a uniform shape across single-strategy and portfolio entries.
+    kernelVersion: 'pre-versioned',
+    // Stub value populated properly by task 8.6 (pnlDigest). Required at
+    // the type level today so the new SimulationRunMeta shape compiles.
+    pnlDigest: '',
   };
 
   const institutionalMetrics = computeInstitutionalMetrics(
@@ -480,6 +596,12 @@ export async function runPortfolioSimulation(
     diversificationRatio:
       weightedSoloDd > 0 ? weightedSoloDd / Math.max(portfolioMedianDd, 1e-9) : 1,
   };
+
+  if (isDynamicCopula && dynamicModel && dynamicModel.fallbackRegimes.length > 0) {
+    portfolioMeta.dynamicCopulaFallbackRegimes = Array.from(
+      new Set(dynamicModel.fallbackRegimes)
+    );
+  }
 
   if (enablePortfolioRegimeBreakdown) {
     portfolioMeta.regimeBreakdown = await buildPortfolioRegimeBreakdown(params, strategies);

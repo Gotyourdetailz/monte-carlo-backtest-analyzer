@@ -1,24 +1,34 @@
 import React, { useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, BarChart, Bar, Cell } from 'recharts';
 import { SimulationResults } from '../types';
+import { MAX_PATHS_TO_PLOT } from './Plots.config';
+
+/**
+ * Chart components in this file expose a baseline `role="img"` + `aria-label` so
+ * screen readers receive a one-line summary of each chart. This is an
+ * accessibility *baseline only*. Full WCAG 2.1 AA validation requires manual
+ * testing with assistive technologies (NVDA, JAWS, VoiceOver, axe-core) and
+ * is out of scope for this remediation pass — see Requirement 24 in
+ * `.kiro/specs/code-review-remediation/requirements.md`.
+ */
 
 export const SpaghettiPlot = ({ results }: { results: SimulationResults | null }) => {
   const chartData = useMemo(() => {
     if (!results) return [];
     
-    // Subsample 50 paths to avoid browser hanging
-    const numPathsToPlot = Math.min(results.paths.length, 50);
+    // Subsample paths to avoid browser hanging on Recharts re-renders.
+    const numPathsToPlot = Math.min(results.paths.length, MAX_PATHS_TO_PLOT);
     const step = Math.max(1, Math.floor(results.paths.length / numPathsToPlot));
     
     const sampledPaths = [];
     for(let i=0; i<results.paths.length; i+=step) {
-        if(sampledPaths.length < 50) sampledPaths.push(results.paths[i]);
+        if(sampledPaths.length < MAX_PATHS_TO_PLOT) sampledPaths.push(results.paths[i]);
     }
 
     const dataLength = results.originalPath.length;
-    const data = [];
+    const data: Record<string, number>[] = [];
     for (let t = 0; t < dataLength; t++) {
-      const point: any = { trade: t, Original: results.originalPath[t] };
+      const point: Record<string, number> = { trade: t, Original: results.originalPath[t] };
       for (let i = 0; i < sampledPaths.length; i++) {
         point[`Path_${i}`] = sampledPaths[i][t];
       }
@@ -32,20 +42,29 @@ export const SpaghettiPlot = ({ results }: { results: SimulationResults | null }
 
   const pathKeys = Object.keys(chartData[0]).filter(k => k.startsWith('Path_'));
 
+  const ariaLabel =
+    `Spaghetti plot of ${pathKeys.length} simulated equity paths` +
+    ` plus the historical original curve over ${chartData.length} trades.` +
+    ' Color encodes path identity; the bold gold line is the historical path.';
+
   return (
-    <div className="h-[400px] w-full mt-4">
+    <div
+      className="h-[400px] w-full mt-4"
+      role="img"
+      aria-label={ariaLabel}
+    >
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={chartData} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
           <XAxis dataKey="trade" tick={{ fontSize: 12 }} tickFormatter={(v) => typeof v === 'number' && !isNaN(v) ? v.toString() : ''} />
           <YAxis tick={{ fontSize: 12 }} domain={['auto', 'auto']} tickFormatter={(v) => typeof v === 'number' && !isNaN(v) ? `$${v.toFixed(0)}` : ''} />
           <Tooltip 
-            contentStyle={{backgroundColor: '#0d1117', color: '#c9d1d9', borderRadius: '8px', border: '1px solid #30363d'}} 
-            labelStyle={{color: '#8b949e'}} 
+            contentStyle={{backgroundColor: 'var(--bg-secondary)', color: '#c9d1d9', borderRadius: '8px', border: '1px solid var(--border)'}} 
+            labelStyle={{color: 'var(--text-secondary)'}} 
             itemSorter={() => -1}
           />
           {pathKeys.map(key => (
-            <Line key={key} type="monotone" dataKey={key} stroke="#58a6ff" strokeWidth={0.5} dot={false} isAnimationActive={false} opacity={0.15} />
+            <Line key={key} type="monotone" dataKey={key} stroke="var(--accent-blue)" strokeWidth={0.5} dot={false} isAnimationActive={false} opacity={0.15} />
           ))}
           <Line type="monotone" dataKey="Original" stroke="#f2cc60" strokeWidth={3} dot={false} isAnimationActive={false} strokeLinecap="round" strokeLinejoin="round" />
         </LineChart>
@@ -55,7 +74,7 @@ export const SpaghettiPlot = ({ results }: { results: SimulationResults | null }
 };
 
 // Histograms using Recharts BarChart
-export const Histogram = ({ data, color, referenceLine, formatter }: { data: number[], color: string, referenceLine?: number, formatter?: (val: number) => string }) => {
+export const Histogram = ({ data, color, referenceLine, formatter, ariaLabel }: { data: number[], color: string, referenceLine?: number, formatter?: (val: number) => string, ariaLabel?: string }) => {
     const bins = useMemo(() => {
         if (!data || data.length === 0) return [];
         // Loop-based min/max to avoid stack overflow with large arrays
@@ -86,8 +105,12 @@ export const Histogram = ({ data, color, referenceLine, formatter }: { data: num
         });
     }, [data]);
 
+    const resolvedAriaLabel =
+        ariaLabel ??
+        `Histogram of ${data?.length ?? 0} outcomes across ${bins.length} bins`;
+
     return (
-    <div className="h-[250px] w-full">
+    <div className="h-[250px] w-full" role="img" aria-label={resolvedAriaLabel}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={bins} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" opacity={0.3} vertical={false} />
@@ -98,8 +121,8 @@ export const Histogram = ({ data, color, referenceLine, formatter }: { data: num
               if (typeof value !== 'number' || isNaN(value)) return ['0', 'Frequency'];
               return [value, 'Frequency'];
             }}
-            labelFormatter={(label: any) => typeof label === 'number' && !isNaN(label) ? (formatter ? formatter(label) : label.toFixed(2)) : '0'}
-            contentStyle={{backgroundColor: '#0d1117', color: '#c9d1d9', borderRadius: '8px', border: '1px solid #30363d'}}
+            labelFormatter={(label: unknown) => typeof label === 'number' && !isNaN(label) ? (formatter ? formatter(label) : label.toFixed(2)) : '0'}
+            contentStyle={{backgroundColor: 'var(--bg-secondary)', color: '#c9d1d9', borderRadius: '8px', border: '1px solid var(--border)'}}
           />
           <Bar dataKey="count" fill={color} isAnimationActive={false}>
           {

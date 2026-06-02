@@ -1,6 +1,7 @@
 import { AlertTriangle } from 'lucide-react';
 import { InstitutionalRiskMetrics } from '../riskMetrics';
 import { MetricsValidity, SimulationRunMeta } from '../types';
+import { cn } from '../lib/utils';
 
 type Props = {
   metrics: InstitutionalRiskMetrics;
@@ -13,9 +14,9 @@ export function InstitutionalMetricsPanel({ metrics, runMeta, metricsValidity }:
 
   return (
     <div className="glass-card animate-fade-in-up overflow-hidden">
-      <div className="px-6 py-4 border-b border-[#30363d]/50 flex flex-wrap items-center justify-between gap-2">
+      <div className="px-6 py-4 border-b border-[var(--border)]/50 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full ${showTerminal ? 'bg-[var(--accent-green)] animate-live-pulse' : 'bg-[var(--accent-amber)] animate-live-pulse'}`} />
+          <span className={cn('w-2 h-2 rounded-full', showTerminal ? 'bg-[var(--accent-green)] animate-live-pulse' : 'bg-[var(--accent-amber)] animate-live-pulse')} />
           <span className="text-[10px] text-[var(--accent-blue)] uppercase font-bold tracking-wider">
             Institutional Risk Summary
           </span>
@@ -75,6 +76,13 @@ function Metric({
   negative?: boolean;
   stagger?: number;
 }) {
+  // NOTE: This panel intentionally keeps a local <Metric> instead of using the shared
+  // <Stat> from `_shared/Stat.tsx`. The Institutional Risk Summary is the page-level
+  // KPI strip and uses a different visual treatment: larger 2xl light typography,
+  // staggered count-up animations, a `muted` state for N/A under permutation
+  // sampling, and a hover background. None of those fit the shared Stat shape, and
+  // collapsing them would either inflate the shared component's surface area or
+  // dilute this panel's hero-row look.
   const staggerClass = stagger > 0 ? `stagger-${Math.min(stagger, 8)}` : '';
   const valueColor = muted
     ? 'text-[var(--text-secondary)]'
@@ -83,9 +91,9 @@ function Metric({
       : 'text-[var(--text-primary)]';
 
   return (
-    <div className={`group rounded-lg p-3 -m-3 transition-colors duration-150 hover:bg-white/[0.02] cursor-default`}>
+    <div className="group rounded-lg p-3 -m-3 transition-colors duration-150 hover:bg-white/[0.02] cursor-default">
       <div className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider mb-1 font-semibold">{label}</div>
-      <div className={`text-2xl font-light metric-value animate-count-up ${staggerClass} ${valueColor}`}>{value}</div>
+      <div className={cn('text-2xl font-light metric-value animate-count-up', staggerClass, valueColor)}>{value}</div>
       {hint && <div className="text-[10px] text-[var(--text-secondary)] mt-1 opacity-60">{hint}</div>}
     </div>
   );

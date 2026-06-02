@@ -1,0 +1,8 @@
+{
+  "//": "Local tsconfig used by sanity_worker_protocol_exhaustiveness.test.ts to compile the deliberately-broken fixture in isolation. Inherits compiler options from the repo root so the exhaustiveness check runs under the same settings as `npm run lint`. Overrides the root's `exclude` so this file's `include` actually picks up the fixture (the root excludes this directory to keep `npm run lint` green).",
+  "extends": "../../../tsconfig.json",
+  "include": [
+    "./incomplete_worker_switch.ts"
+  ],
+  "exclude": []
+}

@@ -1,14 +1,39 @@
 /**
- * End-to-end test with real NinjaTrader CSV data.
+ * End-to-end test with a real NinjaTrader CSV export.
  * Parses the file, runs all models, validates outputs.
- * 
- * Run: npx tsx src/__tests__/e2e_real_data.test.ts
+ *
+ * Portability:
+ *   The CSV path is resolved from (in order):
+ *     1. The `MC_E2E_CSV` environment variable.
+ *     2. The first command-line argument (`process.argv[2]`).
+ *
+ *   When neither is provided — or the resolved path does not exist — the test
+ *   prints a SKIP message including the env-var name to set, and exits with
+ *   status 0 so it does not fail a `npm run lint`/CI sweep on machines that
+ *   do not have the source CSV checked out locally.
+ *
+ *   The assertions below were calibrated against a 127-trade NinjaTrader Grid
+ *   export. Pointing `MC_E2E_CSV` at a CSV with a different shape will produce
+ *   row-count / first-trade assertion failures; that is expected.
+ *
+ * Run:
+ *   $env:MC_E2E_CSV = 'C:\path\to\NinjaTrader Grid ....csv'
+ *   npx tsx src/__tests__/e2e_real_data.test.ts
+ *
+ * Or:
+ *   npx tsx src/__tests__/e2e_real_data.test.ts /path/to/file.csv
  */
 
 import * as fs from 'fs';
-import * as path from 'path';
 import { createSeededRng, meanAndStdDev, calculateMaxDrawdown } from '../mathUtils';
+import { ensureWasmInitialized } from './nodeWasmBootstrap';
 import { computeHistoricalStats, runSimulation } from '../simulationEngine';
+
+// Pre-initialize wasm-engine so the engine's `await initWasm()` short-circuits.
+// The web build's default-export init relies on browser fetch() and silently
+// fails under Node; this helper synchronously instantiates from the .wasm
+// bytes on disk. Test-only — not imported by the runtime app.
+await ensureWasmInitialized();
 import { stationaryBlockBootstrap, optimalBlockLength } from '../blockBootstrap';
 import { computeSlippage, estimateBaseVolatility, type SlippageConfig } from '../slippageModel';
 import { fitBestDistribution } from '../distributionFitting';
@@ -47,7 +72,25 @@ function section(name: string) {
 // ═══════════════════════════════════════════════════════════
 section('CSV Parsing');
 
-const CSV_PATH = String.raw`C:\Users\demir\OneDrive\Documents\NinjaTrader Grid 2026-04-08 10-41 PM.csv`;
+const CSV_PATH = process.env.MC_E2E_CSV ?? process.argv[2];
+
+if (!CSV_PATH || CSV_PATH.trim() === '') {
+  console.log('  ⏭️  SKIP: no CSV path provided.');
+  console.log('     Set the MC_E2E_CSV environment variable (or pass the path');
+  console.log('     as the first CLI argument) to a NinjaTrader Grid CSV to run');
+  console.log('     the end-to-end test. Example:');
+  console.log('       $env:MC_E2E_CSV = "C:\\path\\to\\NinjaTrader Grid.csv"');
+  console.log('       npx tsx src/__tests__/e2e_real_data.test.ts');
+  process.exit(0);
+}
+
+if (!fs.existsSync(CSV_PATH)) {
+  console.log(`  ⏭️  SKIP: CSV not found at "${CSV_PATH}".`);
+  console.log('     Set MC_E2E_CSV to an existing NinjaTrader Grid CSV to run');
+  console.log('     the end-to-end test.');
+  process.exit(0);
+}
+
 const raw = fs.readFileSync(CSV_PATH, 'utf-8');
 const lines = raw.trim().split('\n').map(l => l.replace(/\r$/, ''));
 const header = lines[0].split(',');
@@ -377,7 +420,10 @@ if (propResult.propEvalStats) {
   assert(pe.failDrawdown + pe.failConsistency + pe.failTime >= 0, '[prop] Fail counts are non-negative');
 
   console.log(`    Pass: ${pe.passRate.toFixed(1)}%, FailDD: ${pe.failDrawdown}, FailConsist: ${pe.failConsistency}, FailTime: ${pe.failTime}`);
-  if (pe.tradesToTarget.length > 0) {
+  // tradesToTarget / medianTradesToTarget are populated only when the WASM
+  // kernel surfaces `trades_to_target_passing` (Requirement 4.1). They are
+  // optional today; the log line still renders cleanly when absent.
+  if (pe.tradesToTarget && pe.tradesToTarget.length > 0) {
     console.log(`    Median trades to target: ${pe.medianTradesToTarget}`);
   }
 }

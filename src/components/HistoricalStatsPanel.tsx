@@ -1,4 +1,5 @@
 import { HistoricalStats } from '../types';
+import { cn } from '../lib/utils';
 
 type Props = {
   stats: HistoricalStats;
@@ -23,20 +24,20 @@ export function HistoricalStatsPanel({ stats, title = 'Empirical Backtest Metric
 
   return (
     <div className="glass-card animate-fade-in-up overflow-hidden">
-      <div className="px-6 py-4 border-b border-[#30363d]/50">
+      <div className="px-6 py-4 border-b border-[var(--border)]/50">
         <span className="text-[10px] text-[var(--accent-blue)] uppercase font-bold tracking-wider">{title}</span>
       </div>
       <div className="p-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {items.map((item, i) => (
           <div key={item.label} className="group rounded-lg p-3 -m-3 transition-colors duration-150 hover:bg-white/[0.02] cursor-default">
             <div className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider mb-1 font-semibold">{item.label}</div>
-            <div className={`text-lg metric-value animate-count-up stagger-${Math.min(i + 1, 8)} ${item.color || 'text-[var(--text-primary)]'}`}>{item.value}</div>
+            <div className={cn('text-lg metric-value animate-count-up', `stagger-${Math.min(i + 1, 8)}`, item.color || 'text-[var(--text-primary)]')}>{item.value}</div>
           </div>
         ))}
       </div>
       
       {stats.byRegime && Object.keys(stats.byRegime).length > 0 && (
-        <div className="border-t border-[#30363d]/50 overflow-x-auto">
+        <div className="border-t border-[var(--border)]/50 overflow-x-auto">
           <table className="w-full text-left text-sm text-[var(--text-primary)]">
             <thead className="bg-[var(--bg-elevated)] text-[10px] uppercase text-[var(--text-secondary)]">
               <tr>
@@ -47,15 +48,15 @@ export function HistoricalStatsPanel({ stats, title = 'Empirical Backtest Metric
                 <th className="px-6 py-3 font-semibold text-right">Profit Factor</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#30363d]/30">
+            <tbody className="divide-y divide-[var(--border)]/30">
               {Object.entries(stats.byRegime).map(([regime, rStats]) => (
                 <tr key={regime} className="hover:bg-white/[0.02] transition-colors duration-150">
                   <td className="px-6 py-3 font-medium text-[var(--text-primary)]">
                     <span className="badge badge-blue mr-2">{regime}</span>
                   </td>
                   <td className="px-6 py-3 metric-value text-right">{rStats.totalTrades}</td>
-                  <td className={`px-6 py-3 metric-value text-right ${winRateColor(rStats.winRate)}`}>{rStats.winRate.toFixed(1)}%</td>
-                  <td className={`px-6 py-3 metric-value text-right ${rStats.expectancy > 0 ? 'text-[var(--accent-green)]' : 'text-[var(--accent-red)]'}`}>${rStats.expectancy.toFixed(2)}</td>
+                  <td className={cn('px-6 py-3 metric-value text-right', winRateColor(rStats.winRate))}>{rStats.winRate.toFixed(1)}%</td>
+                  <td className={cn('px-6 py-3 metric-value text-right', rStats.expectancy > 0 ? 'text-[var(--accent-green)]' : 'text-[var(--accent-red)]')}>${rStats.expectancy.toFixed(2)}</td>
                   <td className="px-6 py-3 metric-value text-right">{rStats.profitFactor === Infinity ? '∞' : rStats.profitFactor.toFixed(2)}</td>
                 </tr>
               ))}

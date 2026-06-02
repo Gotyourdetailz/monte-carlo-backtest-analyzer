@@ -1,5 +1,12 @@
 import { ConvergenceResult } from '../convergenceDiagnostics';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { cn } from '../lib/utils';
+
+/**
+ * Convergence chart wrappers expose a baseline `role="img"` + `aria-label` so
+ * screen readers receive a one-line summary. Baseline only — full WCAG 2.1 AA
+ * validation requires manual assistive-technology testing (Requirement 24).
+ */
 
 type Props = {
   convergence: ConvergenceResult;
@@ -46,12 +53,12 @@ export function ConvergencePanel({ convergence }: Props) {
 
   return (
     <div className="glass-card animate-fade-in-up overflow-hidden">
-      <div className="px-6 py-4 border-b border-[#30363d]/50 flex items-center justify-between">
+      <div className="px-6 py-4 border-b border-[var(--border)]/50 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="text-[10px] text-[var(--accent-blue)] uppercase font-bold tracking-wider">
             Convergence Diagnostics
           </span>
-          <span className={`badge ${statusInfo.badge}`}>{statusInfo.label}</span>
+          <span className={cn('badge', statusInfo.badge)}>{statusInfo.label}</span>
         </div>
         <span className="text-[10px] metric-value text-[var(--text-secondary)] opacity-60">
           N = {checkpoints[checkpoints.length - 1].n.toLocaleString()}
@@ -64,28 +71,36 @@ export function ConvergencePanel({ convergence }: Props) {
           <div className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider mb-3 font-semibold">
             VaR & CVaR Stability
           </div>
-          <div className="h-48">
+          <div
+            className="h-48"
+            role="img"
+            aria-label={
+              `Monte Carlo convergence diagnostic — VaR 95% and CVaR 95% as the` +
+              ` simulation count N grows across ${pnlData.length} checkpoints` +
+              ` (final N = ${checkpoints[checkpoints.length - 1].n.toLocaleString()}).`
+            }
+          >
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={pnlData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(48,54,61,0.4)" />
                 <XAxis
                   dataKey="n"
-                  stroke="#8b949e"
+                  stroke="var(--text-secondary)"
                   fontSize={10}
                   tickFormatter={(v: number) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v)}
                 />
                 <YAxis
-                  stroke="#8b949e"
+                  stroke="var(--text-secondary)"
                   fontSize={10}
                   tickFormatter={(v: number) => `$${v.toLocaleString()}`}
                 />
                 <Tooltip
-                  contentStyle={{ background: '#161b22', border: '1px solid #30363d', borderRadius: '8px', fontSize: '11px' }}
+                  contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '11px' }}
                   labelFormatter={(v: number) => `N = ${v.toLocaleString()}`}
                   formatter={(v: number) => [`$${v.toLocaleString()}`, undefined]}
                 />
                 <Legend wrapperStyle={{ fontSize: '10px' }} />
-                <Line type="monotone" dataKey="VaR 95%" stroke="#f85149" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="VaR 95%" stroke="var(--accent-red)" strokeWidth={2} dot={{ r: 3 }} />
                 <Line type="monotone" dataKey="CVaR 95%" stroke="#f0883e" strokeWidth={2} dot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
@@ -97,29 +112,37 @@ export function ConvergencePanel({ convergence }: Props) {
           <div className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider mb-3 font-semibold">
             Ruin Probability Stability
           </div>
-          <div className="h-36">
+          <div
+            className="h-36"
+            role="img"
+            aria-label={
+              `Monte Carlo convergence diagnostic — ruin probability as the` +
+              ` simulation count N grows across ${ruinData.length} checkpoints` +
+              ` (final N = ${checkpoints[checkpoints.length - 1].n.toLocaleString()}).`
+            }
+          >
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={ruinData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(48,54,61,0.4)" />
                 <XAxis
                   dataKey="n"
-                  stroke="#8b949e"
+                  stroke="var(--text-secondary)"
                   fontSize={10}
                   tickFormatter={(v: number) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v)}
                 />
                 <YAxis
-                  stroke="#8b949e"
+                  stroke="var(--text-secondary)"
                   fontSize={10}
                   tickFormatter={(v: number) => `${v}%`}
                   domain={[0, 'auto']}
                 />
                 <Tooltip
-                  contentStyle={{ background: '#161b22', border: '1px solid #30363d', borderRadius: '8px', fontSize: '11px' }}
+                  contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '11px' }}
                   labelFormatter={(v: number) => `N = ${v.toLocaleString()}`}
                   formatter={(v: number) => [`${v}%`, undefined]}
                 />
                 <Legend wrapperStyle={{ fontSize: '10px' }} />
-                <Line type="monotone" dataKey="Ruin %" stroke="#d2a8ff" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="Ruin %" stroke="var(--accent-amber)" strokeWidth={2} dot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>

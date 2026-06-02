@@ -16,12 +16,13 @@ import {
   buildValidationReport,
 } from '../modelValidation';
 import { hillIndex, fitGPD, evtVaR, buildEVTReport } from '../evt';
-import { regressWithRobustSE, buildAttributionReport } from '../benchmarkAttribution';
+import { regressWithRobustSE, buildAttributionReport, buildMultiFactorReport } from '../benchmarkAttribution';
 import {
   parseTimestamp,
   aggregateByDay,
   buildTimestampAnalyticsReport,
 } from '../timestampAnalytics';
+import { buildWalkForwardReport } from '../walkForward';
 
 let failures = 0;
 
@@ -201,6 +202,48 @@ console.log('\n[timestampAnalytics]');
 }
 
 // ─── End-to-end validation roll-up ───────────────────────────────────────────
+
+console.log('\n[walkForward]');
+{
+  // iid Normal — train and OOS should match.
+  const rng = createSeededRng(201);
+  const iid = Array.from({ length: 300 }, () => randomNormal(rng) * 100);
+  const wf = buildWalkForwardReport(iid, { trainFraction: 0.7 });
+  check('Walk-forward on iid Normal does not fail', !!wf && wf.verdict !== 'fail', `verdict=${wf?.verdict}`);
+  // Sample size n=90 in OOS gives discrete binomial; loose tolerance on the rate.
+  check('Walk-forward breach rate within 8 pp of 5%', !!wf && Math.abs(wf.breachRate - 0.05) < 0.08, `breachRate=${wf?.breachRate}`);
+}
+{
+  // Drift: train on N(0,1), OOS on N(2,1) — must reject.
+  const rng = createSeededRng(202);
+  const drift: number[] = [];
+  for (let i = 0; i < 200; i++) drift.push(randomNormal(rng));
+  for (let i = 0; i < 100; i++) drift.push(randomNormal(rng) + 2);
+  const wf = buildWalkForwardReport(drift, { trainFraction: 0.67 });
+  check('Walk-forward detects mean shift', !!wf && wf.verdict === 'fail', `verdict=${wf?.verdict}`);
+}
+
+console.log('\n[multiFactor]');
+{
+  // Generate y = 0.001 + 0.8*F1 + (-0.4)*F2 + ε with σ_ε=0.005, n=400.
+  const rng = createSeededRng(301);
+  const f1: number[] = [];
+  const f2: number[] = [];
+  const y: number[] = [];
+  for (let i = 0; i < 400; i++) {
+    const x1 = randomNormal(rng) * 0.02;
+    const x2 = randomNormal(rng) * 0.015;
+    f1.push(x1);
+    f2.push(x2);
+    y.push(0.001 + 0.8 * x1 - 0.4 * x2 + randomNormal(rng) * 0.0005);
+  }
+  const matrix = f1.map((v, i) => [v, f2[i]]);
+  const r = buildMultiFactorReport(y, matrix, ['F1', 'F2'], 252);
+  check('Multi-factor recovers β1≈0.8', !!r && Math.abs(r.factors[0].coefficient - 0.8) < 0.05, `β1=${r?.factors[0].coefficient.toFixed(3)}`);
+  check('Multi-factor recovers β2≈-0.4', !!r && Math.abs(r.factors[1].coefficient - -0.4) < 0.05, `β2=${r?.factors[1].coefficient.toFixed(3)}`);
+  check('Multi-factor R² high on clean data', !!r && r.rSquared > 0.95, `R²=${r?.rSquared.toFixed(3)}`);
+  check('Multi-factor t-stats |t|>5 on real factors', !!r && Math.abs(r.factors[0].tStat) > 5 && Math.abs(r.factors[1].tStat) > 5);
+}
 
 console.log('\n[end-to-end validation]');
 {
