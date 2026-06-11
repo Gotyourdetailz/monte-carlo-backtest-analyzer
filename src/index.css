@@ -468,6 +468,90 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   Marketing-page editorial system (scroll reveals, marquee,
+   spotlight cards, grain, statement wordmark). All motion is
+   neutralised by the global prefers-reduced-motion block.
+   ═══════════════════════════════════════════════════════════ */
+
+/* On-scroll reveal — driven by IntersectionObserver (Reveal.tsx). */
+.reveal {
+  opacity: 0;
+  transform: translateY(26px);
+  transition:
+    opacity 0.7s var(--ease-out),
+    transform 0.7s var(--ease-out);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; }
+}
+
+/* Methodology marquee — duplicated track scrolls 50%; edges masked. */
+.marquee {
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  align-items: center;
+  gap: 3.5rem;
+  padding-right: 3.5rem;
+  animation: marqueeScroll 52s linear infinite;
+}
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes marqueeScroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+}
+
+/* Cursor spotlight on cards — JS feeds --spot-x/--spot-y (components.tsx). */
+.spotlight-card {
+  position: relative;
+  overflow: hidden;
+}
+.spotlight-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-slow) var(--ease-out);
+  background: radial-gradient(
+    420px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+    rgba(70, 230, 200, 0.10),
+    transparent 65%
+  );
+}
+.spotlight-card:hover::after { opacity: 1; }
+
+/* Film grain — fixed, very low alpha; texture for large flat surfaces. */
+.grain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+/* Statement wordmark — outlined display type for the footer. */
+.wordmark-outline {
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 0.92;
+  color: transparent;
+  -webkit-text-stroke: 1.5px var(--glass-border-strong);
+  user-select: none;
+}
+
+/* ═══════════════════════════════════════════════════════════
    Result-area animated gradient backdrop (subtle)
    ═══════════════════════════════════════════════════════════ */
 .results-backdrop {

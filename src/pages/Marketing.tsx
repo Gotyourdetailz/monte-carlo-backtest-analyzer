@@ -13,8 +13,13 @@
  * MODELED from the user's own past trades, never as a prediction. The single
  * dollar figures in the hero are explicitly labeled an illustrative example.
  *
- * Sections: 1) Top nav  2) Hero  3) What it does  4) How it works
- *           5) Pricing  6) FAQ   7) Footer.
+ * Editorial system: below-the-fold sections reveal on scroll (Reveal.tsx),
+ * numbered mono eyebrows, a methodology marquee, cursor-spotlight cards, and
+ * a statement footer. All motion is honest-budget (≤700ms entries) and fully
+ * neutralised under prefers-reduced-motion.
+ *
+ * Sections: 1) Top nav  2) Hero + stats  3) What it does  4) How it works
+ *           5) Pricing  6) FAQ   7) Statement footer.
  */
 import { Fragment, type ReactElement } from 'react';
 import { Link } from 'react-router-dom';
@@ -35,7 +40,24 @@ import { EdgeScopeHero } from '../components/bench/EdgeScopeHero';
 import { HeroVideoBackdrop } from '../components/bench/HeroVideoBackdrop';
 import { EdgeTrace, PassGauge, TailSpark } from '../components/bench/MiniReadouts';
 import { DISCLAIMER, FAQS, STEPS } from './marketing/content';
-import { FaqItem, PrimaryCta, ReserveCta, SectionHeading } from './marketing/components';
+import {
+  DemoCta,
+  FaqItem,
+  MethodologyMarquee,
+  PrimaryCta,
+  ReserveCta,
+  SectionHeading,
+  StatsStrip,
+  trackSpotlight,
+} from './marketing/components';
+import { Reveal } from './marketing/Reveal';
+
+const NAV_LINKS = [
+  { href: '#what', label: 'What it does' },
+  { href: '#how', label: 'How it works' },
+  { href: '#pricing', label: 'Pricing' },
+  { href: '#faq', label: 'FAQ' },
+] as const;
 
 export function Marketing(): ReactElement {
   const { resolved } = useTheme();
@@ -43,6 +65,8 @@ export function Marketing(): ReactElement {
     <div className="min-h-screen overflow-x-hidden text-[var(--text-primary)]">
       {/* Low-opacity Monte-Carlo path-fan behind the whole page; fades on scroll. */}
       <HeroVideoBackdrop />
+      {/* Film grain — analogue texture over everything, 4% alpha. */}
+      <div className="grain" aria-hidden="true" />
       {/* ── 1. Top nav (glass) ── */}
       <nav
         aria-label="Primary"
@@ -58,14 +82,26 @@ export function Marketing(): ReactElement {
             </span>
           </Link>
 
+          <div className="hidden items-center gap-6 lg:flex">
+            {NAV_LINKS.map((l) => (
+              <a
+                key={l.href}
+                href={l.href}
+                className="text-sm font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+              >
+                {l.label}
+              </a>
+            ))}
+          </div>
+
           <div className="flex items-center gap-2 sm:gap-3">
             <ThemeToggle />
             <ReserveCta className="hidden sm:inline-flex" />
             <Link
               to="/app"
-              className="btn-press inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-[var(--accent-mint)] px-4 py-2.5 text-sm font-semibold text-[var(--bg-primary)] transition-colors hover:bg-[var(--accent-mint-bright)]"
+              className="btn-press inline-flex min-h-[44px] items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-[var(--accent-mint)] px-4 py-2.5 text-sm font-semibold text-[var(--bg-primary)] transition-colors hover:bg-[var(--accent-mint-bright)]"
             >
-              Launch analyzer
+              Launch<span className="hidden sm:inline">&nbsp;analyzer</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
@@ -76,36 +112,37 @@ export function Marketing(): ReactElement {
         {/* ── 2. Hero — instrument-forward: the EDGE·SCOPE is the spectacle ── */}
         <section
           aria-labelledby="hero-heading"
-          className="relative isolate overflow-hidden px-6 pb-20 pt-14 sm:pt-20"
+          className="relative isolate overflow-hidden px-6 pb-24 pt-16 sm:pt-24"
         >
           {/* faint instrument graticule, behind everything */}
           <div
             className="subtle-grid pointer-events-none absolute inset-0 -z-10 opacity-60"
             aria-hidden="true"
           />
-          <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[1fr_1.05fr]">
+          <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[1fr_1.05fr]">
             <div className="text-center lg:text-left">
-              <div className="t-eyebrow panel-enter panel-enter-1 mb-5 inline-flex items-center gap-2 text-[var(--accent-mint)]">
+              <div className="t-eyebrow panel-enter panel-enter-1 mb-6 inline-flex items-center gap-2 text-[var(--accent-mint)]">
                 <Trophy className="h-3.5 w-3.5" />
                 For funded &amp; prop-challenge traders
               </div>
 
               <h1
                 id="hero-heading"
-                className="panel-enter panel-enter-2 mb-5 font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl"
+                className="panel-enter panel-enter-2 mb-6 font-display text-4xl font-semibold leading-[1.02] tracking-tight sm:text-6xl lg:text-[3.4rem] xl:text-[4rem]"
               >
                 Will you pass your prop challenge,
                 <span className="text-[var(--accent-mint)]"> and is your edge real?</span>
               </h1>
 
-              <p className="panel-enter panel-enter-3 mx-auto mb-8 max-w-xl text-base leading-relaxed text-[var(--text-secondary)] lg:mx-0">
+              <p className="panel-enter panel-enter-3 mx-auto mb-9 max-w-xl text-base leading-relaxed text-[var(--text-secondary)] lg:mx-0 lg:text-lg">
                 Your backtest looked great. Here&apos;s the truth on the trades it never saw. Upload
                 your trade tape and we model your in-sample edge against a true out-of-sample holdout.
               </p>
 
               <div className="panel-enter panel-enter-4 flex flex-col items-center justify-center gap-3 sm:flex-row lg:justify-start">
                 <PrimaryCta label="Analyze my trade tape" />
-                <ReserveCta />
+                <DemoCta />
+                <ReserveCta className="sm:hidden xl:inline-flex" />
               </div>
             </div>
 
@@ -119,67 +156,106 @@ export function Marketing(): ReactElement {
               </p>
             </div>
           </div>
+
+          {/* Honest numbers — engine properties, not vanity stats. */}
+          <Reveal className="mx-auto mt-20 max-w-6xl">
+            <StatsStrip />
+          </Reveal>
+        </section>
+
+        {/* Methodology ticker — the toolbox, spelled out. */}
+        <Reveal>
+          <div className="border-y border-[var(--border)]">
+            <MethodologyMarquee />
+          </div>
+        </Reveal>
+
+        {/* ── 3. Three answers — asymmetric, each carries its own readout ── */}
+        <section id="what" aria-labelledby="what-heading" className="scroll-mt-24 px-6 py-24">
+          <div className="mx-auto max-w-6xl">
+            <Reveal>
+              <div id="what-heading">
+                <SectionHeading
+                  eyebrow="01 · The verdicts"
+                  title="Three answers, straight from your own trades"
+                  align="left"
+                />
+              </div>
+            </Reveal>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.3fr_1fr]">
+              {/* Large tile — edge reality check, with its in/out trace */}
+              <Reveal>
+                <div
+                  className="glass-card spotlight-card flex h-full flex-col p-6 sm:p-7"
+                  onPointerMove={trackSpotlight}
+                >
+                  <span className="t-label text-[var(--accent-mint)]">Edge reality check</span>
+                  <div className="my-6">
+                    <EdgeTrace />
+                  </div>
+                  <h3 className="font-display text-xl font-semibold tracking-tight text-[var(--text-primary)]">
+                    Is your edge real, or did the backtest just get lucky?
+                  </h3>
+                  <p className="mt-2 max-w-prose text-sm leading-relaxed text-[var(--text-secondary)]">
+                    A walk-forward out-of-sample test on a 70/30 holdout puts your in-sample edge
+                    against trades it never saw.
+                  </p>
+                </div>
+              </Reveal>
+
+              {/* Right column — two stacked readouts */}
+              <div className="grid grid-cols-1 gap-4">
+                <Reveal delay={80}>
+                  <div
+                    className="glass-card spotlight-card flex h-full flex-col p-6"
+                    onPointerMove={trackSpotlight}
+                  >
+                    <span className="t-label text-[var(--accent-mint)]">Pass probability</span>
+                    <div className="mt-4">
+                      <PassGauge pct={86} />
+                    </div>
+                    <p className="mt-4 text-sm leading-relaxed text-[var(--text-secondary)]">
+                      Thousands of simulated challenge runs: your odds of hitting target before max
+                      drawdown trips you out.
+                    </p>
+                  </div>
+                </Reveal>
+                <Reveal delay={160}>
+                  <div
+                    className="glass-card spotlight-card flex h-full flex-col p-6"
+                    onPointerMove={trackSpotlight}
+                  >
+                    <span className="t-label text-[var(--accent-mint)]">Tail &amp; ruin risk</span>
+                    <div className="mt-4">
+                      <TailSpark />
+                    </div>
+                    <p className="mt-4 text-sm leading-relaxed text-[var(--text-secondary)]">
+                      EVT tail extrapolation and probability-of-ruin: how bad an unseen losing streak
+                      could really get.
+                    </p>
+                  </div>
+                </Reveal>
+              </div>
+            </div>
+          </div>
         </section>
 
         <div className="mx-auto max-w-6xl px-6">
           <div className="divider-gradient" />
         </div>
 
-        {/* ── 3. Three answers — asymmetric, each carries its own readout ── */}
-        <section aria-labelledby="what-heading" className="px-6 py-20">
-          <div className="mx-auto max-w-6xl">
-            <div id="what-heading">
-              <SectionHeading title="Three answers, straight from your own trades" />
-            </div>
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.3fr_1fr]">
-              {/* Large tile — edge reality check, with its in/out trace */}
-              <div className="glass-card panel-enter panel-enter-1 flex flex-col p-6 sm:p-7">
-                <span className="t-label text-[var(--accent-mint)]">Edge reality check</span>
-                <div className="my-6">
-                  <EdgeTrace />
-                </div>
-                <h3 className="font-display text-xl font-semibold tracking-tight text-[var(--text-primary)]">
-                  Is your edge real, or did the backtest just get lucky?
-                </h3>
-                <p className="mt-2 max-w-prose text-sm leading-relaxed text-[var(--text-secondary)]">
-                  A walk-forward out-of-sample test on a 70/30 holdout puts your in-sample edge
-                  against trades it never saw.
-                </p>
-              </div>
-
-              {/* Right column — two stacked readouts */}
-              <div className="grid grid-cols-1 gap-4">
-                <div className="glass-card panel-enter panel-enter-2 flex flex-col p-6">
-                  <span className="t-label text-[var(--accent-mint)]">Pass probability</span>
-                  <div className="mt-4">
-                    <PassGauge pct={86} />
-                  </div>
-                  <p className="mt-4 text-sm leading-relaxed text-[var(--text-secondary)]">
-                    Thousands of simulated challenge runs: your odds of hitting target before max
-                    drawdown trips you out.
-                  </p>
-                </div>
-                <div className="glass-card panel-enter panel-enter-3 flex flex-col p-6">
-                  <span className="t-label text-[var(--accent-mint)]">Tail &amp; ruin risk</span>
-                  <div className="mt-4">
-                    <TailSpark />
-                  </div>
-                  <p className="mt-4 text-sm leading-relaxed text-[var(--text-secondary)]">
-                    EVT tail extrapolation and probability-of-ruin: how bad an unseen losing streak
-                    could really get.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
         {/* ── 4. How it works — signal path (CH-01 → CH-02 → CH-03) ── */}
-        <section aria-labelledby="how-heading" className="px-6 py-20">
+        <section id="how" aria-labelledby="how-heading" className="scroll-mt-24 px-6 py-24">
           <div className="mx-auto max-w-5xl">
-            <div id="how-heading">
-              <SectionHeading title="From CSV to a verdict in three steps" />
-            </div>
+            <Reveal>
+              <div id="how-heading">
+                <SectionHeading
+                  eyebrow="02 · The signal path"
+                  title="From CSV to a verdict in three steps"
+                  align="left"
+                />
+              </div>
+            </Reveal>
             <ol className="relative grid grid-cols-1 gap-10 md:grid-cols-3 md:gap-6">
               {/* connecting rail between channel nodes (desktop only) */}
               <div
@@ -194,89 +270,111 @@ export function Marketing(): ReactElement {
                 const Icon = s.icon;
                 const live = i === 1;
                 return (
-                  <li key={s.title} className={`panel-enter panel-enter-${i + 1} relative flex flex-col`}>
-                    <div className="flex items-center gap-3">
-                      <span
-                        className="relative z-[1] h-3.5 w-3.5 rounded-full"
-                        style={{
-                          background: live ? 'var(--accent-mint)' : 'var(--bg-elevated)',
-                          boxShadow: live
-                            ? '0 0 0 4px var(--bg-primary), 0 0 10px var(--accent-mint)'
-                            : 'inset 0 0 0 1px var(--glass-border-strong), 0 0 0 4px var(--bg-primary)',
-                        }}
-                        aria-hidden="true"
-                      />
-                      <span className="t-label text-[var(--text-secondary)]">CH-0{i + 1}</span>
-                    </div>
-                    <div className="mt-5 flex items-center gap-2">
-                      <Icon className="h-5 w-5 text-[var(--accent-mint)]" />
-                      <h3 className="text-base font-semibold text-[var(--text-primary)]">{s.title}</h3>
-                    </div>
-                    <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">{s.body}</p>
+                  <li key={s.title} className="relative flex flex-col">
+                    <Reveal delay={i * 90}>
+                      <div className="flex items-center gap-3">
+                        <span
+                          className="relative z-[1] h-3.5 w-3.5 rounded-full"
+                          style={{
+                            background: live ? 'var(--accent-mint)' : 'var(--bg-elevated)',
+                            boxShadow: live
+                              ? '0 0 0 4px var(--bg-primary), 0 0 10px var(--accent-mint)'
+                              : 'inset 0 0 0 1px var(--glass-border-strong), 0 0 0 4px var(--bg-primary)',
+                          }}
+                          aria-hidden="true"
+                        />
+                        <span className="t-label text-[var(--text-secondary)]">CH-0{i + 1}</span>
+                      </div>
+                      <div className="mt-5 flex items-center gap-2">
+                        <Icon className="h-5 w-5 text-[var(--accent-mint)]" />
+                        <h3 className="text-base font-semibold text-[var(--text-primary)]">{s.title}</h3>
+                      </div>
+                      <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">{s.body}</p>
+                    </Reveal>
                   </li>
                 );
               })}
             </ol>
-            <p className="mx-auto mt-12 max-w-2xl text-center text-xs leading-relaxed text-[var(--text-secondary)]">
-              Built on real methodology: Monte-Carlo resampling, walk-forward out-of-sample
-              validation, SR 11-7 model validation, and EVT tail analysis.
-            </p>
+            <Reveal>
+              <p className="mx-auto mt-14 max-w-2xl text-center text-xs leading-relaxed text-[var(--text-secondary)]">
+                Built on real methodology: Monte-Carlo resampling, walk-forward out-of-sample
+                validation, SR 11-7 model validation, and EVT tail analysis.
+              </p>
+              <div className="mt-8 flex justify-center">
+                <DemoCta />
+              </div>
+            </Reveal>
           </div>
         </section>
 
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="divider-gradient" />
+        </div>
+
         {/* ── 5. Pricing ── */}
-        <section aria-labelledby="pricing-heading" className="px-6 py-20">
+        <section id="pricing" aria-labelledby="pricing-heading" className="scroll-mt-24 px-6 py-24">
           <div className="mx-auto max-w-2xl">
-            <div id="pricing-heading">
-              <SectionHeading title="Founding price, locked in" />
-            </div>
-            <div className="glass-card panel-enter panel-enter-1 border border-[rgba(70,230,200,0.30)] p-8 text-center">
-              <div className="badge badge-blue mx-auto mb-4 inline-flex items-center gap-1.5">
-                <Lock className="h-3 w-3" />
-                EARLY ADOPTER
+            <Reveal>
+              <div id="pricing-heading">
+                <SectionHeading eyebrow="03 · The deal" title="Founding price, locked in" />
               </div>
-              <h3 className="font-display text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
-                {isEarlyAccessEnabled
-                  ? 'Founding price, locked in for early adopters'
-                  : 'Free during the demand probe'}
-              </h3>
-              <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-[var(--text-secondary)]">
-                {isEarlyAccessEnabled
-                  ? 'Reserve now to lock the founding rate before public launch. No fake countdowns, no anchoring, just an honest early-adopter price.'
-                  : 'The analyzer is free to use while we gauge demand. Run your tape, no card required.'}
-              </p>
-              <ul className="mx-auto mt-6 grid max-w-md gap-2 text-left text-sm text-[var(--text-secondary)]">
-                <li className="flex items-start gap-2">
-                  <Database className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent-blue)]" />
-                  Runs entirely in your browser. Your trades stay on your machine.
-                </li>
-                <li className="flex items-start gap-2">
-                  <Target className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent-blue)]" />
-                  Prop-firm presets: TopOneFutures, FTMO, Apex.
-                </li>
-                <li className="flex items-start gap-2">
-                  <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent-blue)]" />
-                  Full model validation, EVT tails, and walk-forward OOS scoring.
-                </li>
-              </ul>
-              <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                <PrimaryCta label="Launch the analyzer" />
-                <ReserveCta />
+            </Reveal>
+            <Reveal delay={80}>
+              <div
+                className="glass-card spotlight-card border border-[rgba(70,230,200,0.30)] p-8 text-center"
+                onPointerMove={trackSpotlight}
+              >
+                <div className="badge badge-blue mx-auto mb-4 inline-flex items-center gap-1.5">
+                  <Lock className="h-3 w-3" />
+                  EARLY ADOPTER
+                </div>
+                <h3 className="font-display text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
+                  {isEarlyAccessEnabled
+                    ? 'Founding price, locked in for early adopters'
+                    : 'Free during the demand probe'}
+                </h3>
+                <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-[var(--text-secondary)]">
+                  {isEarlyAccessEnabled
+                    ? 'Reserve now to lock the founding rate before public launch. No fake countdowns, no anchoring, just an honest early-adopter price.'
+                    : 'The analyzer is free to use while we gauge demand. Run your tape, no card required.'}
+                </p>
+                <ul className="mx-auto mt-6 grid max-w-md gap-2 text-left text-sm text-[var(--text-secondary)]">
+                  <li className="flex items-start gap-2">
+                    <Database className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent-blue)]" />
+                    Runs entirely in your browser. Your trades stay on your machine.
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Target className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent-blue)]" />
+                    Prop-firm presets: TopOneFutures, FTMO, Apex.
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent-blue)]" />
+                    Full model validation, EVT tails, and walk-forward OOS scoring.
+                  </li>
+                </ul>
+                <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                  <PrimaryCta label="Launch the analyzer" />
+                  <ReserveCta />
+                </div>
               </div>
-            </div>
+            </Reveal>
           </div>
         </section>
 
         {/* ── 6. FAQ ── */}
-        <section aria-labelledby="faq-heading" className="px-6 py-20">
+        <section id="faq" aria-labelledby="faq-heading" className="scroll-mt-24 px-6 py-24">
           <div className="mx-auto max-w-3xl">
-            <div id="faq-heading">
-              <SectionHeading title="The questions that actually matter" />
-            </div>
+            <Reveal>
+              <div id="faq-heading">
+                <SectionHeading eyebrow="04 · Straight answers" title="The questions that actually matter" />
+              </div>
+            </Reveal>
             <div className="grid grid-cols-1 gap-3">
-              {FAQS.map((f) => (
+              {FAQS.map((f, i) => (
                 <Fragment key={f.q}>
-                  <FaqItem q={f.q} a={f.a} />
+                  <Reveal delay={i * 60}>
+                    <FaqItem q={f.q} a={f.a} />
+                  </Reveal>
                 </Fragment>
               ))}
             </div>
@@ -284,21 +382,53 @@ export function Marketing(): ReactElement {
         </section>
       </main>
 
-      {/* ── 7. Footer ── */}
-      <footer className="border-t border-[var(--border)] px-6 py-12">
+      {/* ── 7. Statement footer ── */}
+      <footer className="relative overflow-hidden border-t border-[var(--border)] px-6 pb-10 pt-16">
         <div className="mx-auto max-w-6xl">
-          <div className="flex flex-col items-start gap-3">
-            <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-[var(--text-secondary)]" />
-              <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
-                Methodology & disclaimer
-              </span>
+          <Reveal>
+            <div className="flex flex-col items-start justify-between gap-10 md:flex-row md:items-end">
+              <div className="max-w-xl">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-[var(--text-secondary)]" />
+                  <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
+                    Methodology &amp; disclaimer
+                  </span>
+                </div>
+                <p className="mt-3 text-xs leading-relaxed text-[var(--text-secondary)]">
+                  {DISCLAIMER}
+                </p>
+              </div>
+              <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2">
+                {NAV_LINKS.map((l) => (
+                  <a
+                    key={l.href}
+                    href={l.href}
+                    className="text-xs font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+                  >
+                    {l.label}
+                  </a>
+                ))}
+                <Link
+                  to="/app"
+                  className="text-xs font-medium text-[var(--accent-mint)] transition-colors hover:text-[var(--accent-mint-bright)]"
+                >
+                  Launch analyzer →
+                </Link>
+              </nav>
             </div>
-            <p className="max-w-2xl text-xs leading-relaxed text-[var(--text-secondary)]">
-              {DISCLAIMER}
-            </p>
-          </div>
-          <div className="mt-8 border-t border-[var(--border)] pt-6 text-xs text-[var(--text-secondary)]">
+          </Reveal>
+
+          {/* Statement wordmark — outlined, oversized, decorative. */}
+          <Reveal>
+            <div
+              aria-hidden="true"
+              className="wordmark-outline font-display mt-14 select-none whitespace-nowrap text-[18vw] leading-none md:text-[12rem]"
+            >
+              EDGECHECK
+            </div>
+          </Reveal>
+
+          <div className="mt-6 border-t border-[var(--border)] pt-6 text-xs text-[var(--text-secondary)]">
             © {new Date().getFullYear()} EdgeCheck. Modeled probabilities from
             your own trades, for research and education.
           </div>

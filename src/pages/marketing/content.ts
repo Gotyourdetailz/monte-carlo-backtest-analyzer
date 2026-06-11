@@ -124,6 +124,36 @@ export const FAQS: readonly Faq[] = [
   },
 ];
 
+// ── Honest numbers strip (hero). Every figure is a real property of the
+//    engine, not a usage/vanity stat (Req 19.3: no fabricated trust signals).
+export interface Stat {
+  value: string;
+  label: string;
+}
+
+export const STATS: readonly Stat[] = [
+  { value: '10,000', label: 'simulated challenge runs per click' },
+  { value: '100%', label: 'client-side — trades never leave your browser' },
+  { value: '70/30', label: 'walk-forward train / holdout split' },
+  { value: '0', label: 'signups, uploads, or servers required' },
+];
+
+// ── Methodology marquee — every term is a real technique in the engine. ──
+export const MARQUEE_TERMS: readonly string[] = [
+  'Monte-Carlo resampling',
+  'Walk-forward OOS',
+  'EVT tail analysis',
+  'SR 11-7 validation',
+  'Kupiec POF',
+  'Christoffersen independence',
+  'Gaussian copula',
+  'GARCH(1,1)',
+  'Block bootstrap',
+  'Hill tail index',
+  'PIT calibration',
+  'Ljung–Box',
+];
+
 /** The compliance disclaimer, shown in the footer. */
 export const DISCLAIMER =
   'Modeled from Monte-Carlo resampling of your own past trades. Not a prediction of future results and not financial advice.';
