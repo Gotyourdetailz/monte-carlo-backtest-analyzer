@@ -1,4 +1,4 @@
-import { Upload, Trophy, Target, LineChart, ShieldAlert } from 'lucide-react';
+import { Upload, Trophy, Target, LineChart, ShieldAlert, Play } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { EARLY_ACCESS_URL, isEarlyAccessEnabled, trackEvent } from '../config';
 import { useTheme } from '../theme/ThemeProvider';
@@ -7,6 +7,8 @@ import { EdgeScopeHero } from './bench/EdgeScopeHero';
 type Props = {
   hasFile: boolean;
   isPortfolio: boolean;
+  /** Loads the bundled synthetic sample tape and auto-runs the simulation. */
+  onLoadDemo: () => void;
 };
 
 const FEATURES = [
@@ -36,7 +38,7 @@ const ACCENT: Record<string, { border: string; text: string }> = {
   amber:   { border: 'border-[rgba(205,161,60,0.30)]', text: 'text-[var(--accent-amber)]' },
 };
 
-export function EmptyHero({ hasFile, isPortfolio }: Props) {
+export function EmptyHero({ hasFile, isPortfolio, onLoadDemo }: Props) {
   const { resolved } = useTheme();
   return (
     <div className="relative min-h-[80vh] flex flex-col items-center justify-center px-6 overflow-hidden">
@@ -63,6 +65,19 @@ export function EmptyHero({ hasFile, isPortfolio }: Props) {
         </p>
 
         <div className="panel-enter panel-enter-4 flex flex-col items-center gap-4 mb-12">
+          {!hasFile && (
+            <button
+              type="button"
+              onClick={() => {
+                trackEvent('demo_tape_click', { source: 'empty_hero' });
+                onLoadDemo();
+              }}
+              className="btn-press inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-[var(--accent-mint)] px-5 py-2.5 text-sm font-semibold text-[var(--bg-primary)] transition-colors hover:bg-[var(--accent-mint-bright)]"
+            >
+              <Play className="w-4 h-4" />
+              Run a sample tape — no CSV needed
+            </button>
+          )}
           <div className="flex items-center gap-3 text-xs text-[var(--text-secondary)]">
             <Upload className="w-4 h-4 text-[var(--accent-blue)]" />
             <span>Drop your CSV in the sidebar or click the upload area</span>

@@ -36,6 +36,7 @@ import { parseFinancialNumber, buildDailyData, buildPortfolioStrategySleeves, de
 import { buildResultsCsvBlob, buildResultsCsvFilename } from './csvExport';
 import { buildSingleRunRequest, buildPortfolioRunRequest } from './runDispatch';
 import { useCsvIngest } from './hooks/useCsvIngest';
+import { useDemoTape } from './hooks/useDemoTape';
 import { useSimulationRunner } from './hooks/useSimulationRunner';
 
 /**
@@ -144,13 +145,10 @@ export default function App() {
   } = useSimulationRunner();
 
   // Surface the hook's error string into the existing inline error banner.
-  useEffect(() => {
-    if (simError) setError(simError);
-  }, [simError]);
+  useEffect(() => { if (simError) setError(simError); }, [simError]);
 
   const progress = simProgress ? Math.round(simProgress.pct * 100) : 0;
-  const results: SimulationResults | null =
-    resultsHistory[activeTab] ?? null;
+  const results: SimulationResults | null = resultsHistory[activeTab] ?? null;
 
   /**
    * Single canonical `DailyData[]` derivation (Requirement 10.9).
@@ -465,6 +463,8 @@ export default function App() {
     }
   };
 
+  const { loadDemo } = useDemoTape({ ingest, reset: resetIngest, ready: parsedData.length > 0, run: handleRun, onError: setError });
+
   const handleDownload = () => {
     if (!results) return;
     const blob = buildResultsCsvBlob(results, { activeTab, startingCapital });
@@ -561,7 +561,7 @@ export default function App() {
 
         <div className="flex-1 overflow-y-auto p-8 custom-scrollbar results-backdrop">
           {!results && !isLoading ? (
-            <EmptyHero hasFile={csvData.length > 0} isPortfolio={activeTab === 'portfolio'} />
+            <EmptyHero hasFile={csvData.length > 0} isPortfolio={activeTab === 'portfolio'} onLoadDemo={loadDemo} />
           ) : results ? (
             <ResultsView
               results={results} activeTab={activeTab} regimeCol={regimeCol}

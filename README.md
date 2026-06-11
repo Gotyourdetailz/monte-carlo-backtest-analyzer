@@ -13,6 +13,11 @@ npm run dev
 
 Open http://localhost:3000
 
+**No CSV handy?** Click **"Run a sample tape"** on the analyzer's empty state
+(or open `/app?demo=1`) — a bundled synthetic NinjaTrader-format tape
+(`public/sample-tape.csv`, generated from a seeded script; no real trader data)
+is ingested and the full simulation auto-runs.
+
 ## What makes this institutional-grade
 
 | Capability | Purpose |
