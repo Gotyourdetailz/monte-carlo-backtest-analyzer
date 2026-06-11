@@ -517,7 +517,7 @@ const TimestampSection: React.FC<{ t: TimestampAnalyticsReport; dailyLossLimit?:
         </View>
         <View style={styles.smallStat}>
           <Text style={styles.smallStatLabel}>Max losing streak</Text>
-          <Text style={[styles.smallStatValue, t.maxLosingDayStreak >= 5 ? { color: '#f85149' } : null].filter(Boolean) as object[]}>
+          <Text style={t.maxLosingDayStreak >= 5 ? [styles.smallStatValue, { color: '#f85149' }] : styles.smallStatValue}>
             {t.maxLosingDayStreak} days
           </Text>
         </View>

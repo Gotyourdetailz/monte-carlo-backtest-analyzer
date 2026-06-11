@@ -23,24 +23,35 @@ export function expectedShortfall(sortedAsc: number[], confidence = 0.95): numbe
   return tail.reduce((s, v) => s + v, 0) / tail.length;
 }
 
+/*
+ * Moment calculations below use only IEEE-754 correctly-rounded operations
+ * (+, *, /, Math.sqrt) — never `**` / `Math.pow`, whose results for
+ * non-trivial exponents are implementation-defined and differ by ±1 ULP
+ * across platforms and V8 versions. This preserves the engine's
+ * reproducibility contract: same seed → byte-identical result JSON on
+ * every machine (see property_regime_preservation.test.ts, Req 3.1/3.6).
+ */
 export function skewness(data: number[]): number {
   const n = data.length;
   if (n < 3) return 0;
   const mean = data.reduce((s, v) => s + v, 0) / n;
-  const m2 = data.reduce((s, v) => s + (v - mean) ** 2, 0) / n;
-  const m3 = data.reduce((s, v) => s + (v - mean) ** 3, 0) / n;
+  const m2 = data.reduce((s, v) => s + (v - mean) * (v - mean), 0) / n;
+  const m3 = data.reduce((s, v) => s + (v - mean) * (v - mean) * (v - mean), 0) / n;
   if (m2 === 0) return 0;
-  return m3 / m2 ** 1.5;
+  return m3 / (m2 * Math.sqrt(m2));
 }
 
 export function excessKurtosis(data: number[]): number {
   const n = data.length;
   if (n < 4) return 0;
   const mean = data.reduce((s, v) => s + v, 0) / n;
-  const m2 = data.reduce((s, v) => s + (v - mean) ** 2, 0) / n;
-  const m4 = data.reduce((s, v) => s + (v - mean) ** 4, 0) / n;
+  const m2 = data.reduce((s, v) => s + (v - mean) * (v - mean), 0) / n;
+  const m4 = data.reduce((s, v) => {
+    const d2 = (v - mean) * (v - mean);
+    return s + d2 * d2;
+  }, 0) / n;
   if (m2 === 0) return 0;
-  return m4 / m2 ** 2 - 3;
+  return m4 / (m2 * m2) - 3;
 }
 
 export type InstitutionalRiskMetrics = {

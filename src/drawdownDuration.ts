@@ -64,8 +64,10 @@ export function computeDrawdownDurations(equityCurve: number[]): DrawdownPeriod[
       }
       peak = val;
     } else {
-      // Below peak — in drawdown
-      const currentDepth = (peak - val) / peak;
+      // Below peak — in drawdown. A non-positive peak means the account is
+      // already wiped out; relative depth is undefined there, so cap at 100%
+      // rather than emitting Infinity/NaN.
+      const currentDepth = peak > 0 ? (peak - val) / peak : 1;
       if (!inDrawdown) {
         ddStart = i;
         inDrawdown = true;

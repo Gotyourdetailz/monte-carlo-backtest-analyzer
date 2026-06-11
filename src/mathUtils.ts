@@ -74,7 +74,10 @@ export function calculateMaxDrawdown(equity: number[]): number {
   let maxDd = 0;
   for (const v of equity) {
     if (v > peak) peak = v;
-    const dd = (peak - v) / peak;
+    // A non-positive peak means the account is already wiped out — relative
+    // drawdown is undefined there, so cap at 100% instead of emitting
+    // Infinity/NaN that would poison downstream percentile metrics.
+    const dd = peak > 0 ? (peak - v) / peak : v < peak ? 1 : 0;
     if (dd > maxDd) maxDd = dd;
   }
   return maxDd;
