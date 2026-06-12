@@ -140,7 +140,7 @@ export function Marketing(): ReactElement {
               </p>
 
               <div className="panel-enter panel-enter-4 flex flex-col items-center justify-center gap-3 sm:flex-row lg:justify-start">
-                <PrimaryCta label="Analyze my trade tape" />
+                <PrimaryCta label="Test your edge" />
                 <DemoCta />
                 <ReserveCta className="sm:hidden xl:inline-flex" />
               </div>
@@ -353,7 +353,7 @@ export function Marketing(): ReactElement {
                   </li>
                 </ul>
                 <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                  <PrimaryCta label="Launch the analyzer" />
+                  <PrimaryCta label="Test your edge" />
                   <ReserveCta />
                 </div>
               </div>
