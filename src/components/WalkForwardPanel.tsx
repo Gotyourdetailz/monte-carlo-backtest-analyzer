@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import type { WalkForwardReport } from '../walkForward';
 import type { TestVerdict } from '../modelValidation';
 import { Stat } from './_shared/Stat';
+import { useTerm } from '../lang/LanguageProvider';
 import { cn } from '../lib/utils';
 
 type Props = {
@@ -32,6 +33,7 @@ function fmtNum(v: number, d = 2): string {
 }
 
 export function WalkForwardPanel({ report }: Props) {
+  const t = useTerm();
   const v = VERDICT_STYLE[report.verdict];
   // Walk-Forward's `negative` semantically means an OOS *warning* (calibration drift),
   // not a loss. The shared <Stat> defaults to red for `negative`; we pass
@@ -41,7 +43,7 @@ export function WalkForwardPanel({ report }: Props) {
       <div className="px-6 py-4 border-b border-[var(--border)]/50 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <span className="text-[10px] text-[var(--accent-blue)] uppercase font-bold tracking-wider">
-            Walk-Forward / Out-of-Sample Validation
+            {t('walkForwardPanel').label}
           </span>
           <span className={cn('badge inline-flex items-center gap-1', v.badge)}>
             {v.icon}

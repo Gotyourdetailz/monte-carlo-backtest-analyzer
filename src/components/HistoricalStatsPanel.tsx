@@ -1,4 +1,5 @@
 import { HistoricalStats } from '../types';
+import { useTerm } from '../lang/LanguageProvider';
 import { cn } from '../lib/utils';
 
 type Props = {
@@ -6,17 +7,19 @@ type Props = {
   title?: string;
 };
 
-export function HistoricalStatsPanel({ stats, title = 'Empirical Backtest Metrics' }: Props) {
+export function HistoricalStatsPanel({ stats, title }: Props) {
+  const t = useTerm();
+  const heading = title ?? t('empiricalStats').label;
   const items = [
     { label: 'Trades', value: stats.totalTrades.toLocaleString() },
     { label: 'Win Rate', value: `${stats.winRate.toFixed(1)}%`, color: stats.winRate >= 50 ? 'text-[var(--accent-green)]' : stats.winRate >= 30 ? 'text-[var(--accent-amber)]' : 'text-[var(--accent-red)]' },
     { label: 'Profit Factor', value: stats.profitFactor === Infinity ? '∞' : stats.profitFactor.toFixed(2), color: stats.profitFactor >= 1.5 ? 'text-[var(--accent-green)]' : stats.profitFactor >= 1.0 ? 'text-[var(--accent-amber)]' : 'text-[var(--accent-red)]' },
-    { label: 'Expectancy', value: `$${stats.expectancy.toFixed(2)}`, color: stats.expectancy > 0 ? 'text-[var(--accent-green)]' : 'text-[var(--accent-red)]' },
-    { label: 'Sharpe (ann.)', value: stats.sharpeRatio.toFixed(2) },
-    { label: 'Sortino (ann.)', value: stats.sortinoRatio.toFixed(2) },
-    { label: 'Max Consec. Losses', value: String(stats.maxConsecutiveLosses), color: stats.maxConsecutiveLosses > 10 ? 'text-[var(--accent-red)]' : undefined },
-    { label: 'Kelly Fraction', value: `${(stats.kellyCriterion * 100).toFixed(1)}%` },
-    { label: 'Recovery Factor', value: stats.recoveryFactor.toFixed(2) },
+    { label: t('expectancy').label, value: `$${stats.expectancy.toFixed(2)}`, color: stats.expectancy > 0 ? 'text-[var(--accent-green)]' : 'text-[var(--accent-red)]' },
+    { label: t('sharpe').label, value: stats.sharpeRatio.toFixed(2) },
+    { label: t('sortino').label, value: stats.sortinoRatio.toFixed(2) },
+    { label: t('maxConsecLosses').label, value: String(stats.maxConsecutiveLosses), color: stats.maxConsecutiveLosses > 10 ? 'text-[var(--accent-red)]' : undefined },
+    { label: t('kelly').label, value: `${(stats.kellyCriterion * 100).toFixed(1)}%` },
+    { label: t('recoveryFactor').label, value: stats.recoveryFactor.toFixed(2) },
   ];
 
   const winRateColor = (wr: number) =>
@@ -25,7 +28,7 @@ export function HistoricalStatsPanel({ stats, title = 'Empirical Backtest Metric
   return (
     <div className="glass-card animate-fade-in-up overflow-hidden">
       <div className="px-6 py-4 border-b border-[var(--border)]/50">
-        <span className="text-[10px] text-[var(--accent-blue)] uppercase font-bold tracking-wider">{title}</span>
+        <span className="text-[10px] text-[var(--accent-blue)] uppercase font-bold tracking-wider">{heading}</span>
       </div>
       <div className="p-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {items.map((item, i) => (

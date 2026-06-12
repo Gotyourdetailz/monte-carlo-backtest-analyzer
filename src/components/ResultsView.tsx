@@ -31,6 +31,7 @@ import { MultiFactorPanel } from './MultiFactorPanel';
 import { MetricCard } from './MetricCard';
 import { ChallengeVerdict } from './ChallengeVerdict';
 import { PERMUTATION_TERMINAL_WARNING } from '../metricsValidity';
+import { useTerm } from '../lang/LanguageProvider';
 import { cn } from '../lib/utils';
 
 export interface ResultsViewProps {
@@ -206,18 +207,19 @@ function KpiRow({
   ruinThreshold: number;
   p95MaxDrawdown: number;
 }) {
+  const t = useTerm();
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       {results.metricsValidity.terminalPnL && (
         <>
           <MetricCard
-            title="Prob. of Ruin"
+            title={t('ruinProb').label}
             value={`${results.ruinProbability.toFixed(1)}%`}
             subtitle={`Threshold: ${ruinThreshold}% Capital`}
             highlight={results.ruinProbability > 10 ? 'red' : 'green'}
           />
           <MetricCard
-            title="Terminal Bal. EV"
+            title={t('terminalEv').label}
             value={`$${Math.round(results.meanFinalBalance).toLocaleString()}`}
             subtitle={`5th pct: $${Math.round(results.p5Balance).toLocaleString()} — 95th pct: $${Math.round(results.p95Balance).toLocaleString()}`}
             highlight={results.p5Balance < startingCapital ? 'red' : 'blue'}
@@ -225,15 +227,15 @@ function KpiRow({
         </>
       )}
       <MetricCard
-        title="Simulated Max DD"
+        title={t('simMaxDd').label}
         value={`${(p95MaxDrawdown * 100).toFixed(1)}%`}
-        subtitle="95th percentile risk"
+        subtitle={t('simMaxDd').hint ?? ''}
         highlight={p95MaxDrawdown > results.originalMaxDrawdown * 1.5 ? 'red' : 'white'}
       />
       <MetricCard
-        title="Historical Max DD"
+        title={t('histMaxDd').label}
         value={`${((results.originalMaxDrawdown || 0) * 100).toFixed(1)}%`}
-        subtitle="Empirical Drawdown"
+        subtitle={t('histMaxDd').hint ?? ''}
         highlight="green"
       />
     </div>
@@ -242,20 +244,21 @@ function KpiRow({
 
 function PropEvalCard({ results }: { results: SimulationResults }) {
   const stats = results.propEvalStats;
+  const t = useTerm();
   if (!stats) return null;
   return (
     <div className="bg-[var(--bg-secondary)] border border-[var(--border)] rounded-2xl overflow-hidden relative">
       <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)] bg-transparent">
         <span className="text-[10px] text-[#238636] uppercase font-bold tracking-wider flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-[#238636]" />
-          Prop Firm Evaluation Results (N = {results.paths.length})
+          {t('propEvalPanel').label} (N = {results.paths.length})
         </span>
       </div>
       <div className="p-6 grid grid-cols-1 md:grid-cols-4 gap-6">
-        <PropEvalTile label="Pass Rate" value={stats.passRate} valueClass="text-white" />
-        <PropEvalTile label="Failed: Max DD" value={stats.failDrawdown} valueClass="text-[var(--accent-red)]" />
-        <PropEvalTile label="Failed: Consistency" value={stats.failConsistency} valueClass="text-[#f2cc60]" />
-        <PropEvalTile label="Failed: Time/No Target" value={stats.failTime} valueClass="text-[var(--text-secondary)]" />
+        <PropEvalTile label={t('passRate').label} value={stats.passRate} valueClass="text-white" />
+        <PropEvalTile label={t('failDrawdown').label} value={stats.failDrawdown} valueClass="text-[var(--accent-red)]" />
+        <PropEvalTile label={t('failConsistency').label} value={stats.failConsistency} valueClass="text-[#f2cc60]" />
+        <PropEvalTile label={t('failTime').label} value={stats.failTime} valueClass="text-[var(--text-secondary)]" />
       </div>
     </div>
   );
@@ -304,11 +307,12 @@ function SpaghettiCard({ results }: { results: SimulationResults }) {
 }
 
 function DistributionCards({ results }: { results: SimulationResults }) {
+  const t = useTerm();
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-12">
       <div className="bg-[var(--bg-secondary)] border border-[var(--border)] rounded-2xl p-6 relative">
         <span className="text-[10px] text-[var(--text-secondary)] uppercase font-bold tracking-wider">
-          Terminal Account Balance Distribution
+          {t('balanceDistribution').label}
         </span>
         <div className="mt-4">
           <Histogram
@@ -321,7 +325,7 @@ function DistributionCards({ results }: { results: SimulationResults }) {
       </div>
       <div className="bg-[var(--bg-secondary)] border border-[var(--border)] rounded-2xl p-6 relative">
         <span className="text-[10px] text-[var(--text-secondary)] uppercase font-bold tracking-wider">
-          Max Drawdown Distribution
+          {t('drawdownDistribution').label}
         </span>
         <div className="mt-4">
           <Histogram
@@ -406,6 +410,7 @@ function DrawdownDurationCard({
 }: {
   duration: NonNullable<SimulationResults['drawdownDuration']>;
 }) {
+  const t = useTerm();
   const p95Tone =
     duration.p95MaxDuration > 50
       ? 'text-[var(--accent-red)]'
@@ -420,13 +425,13 @@ function DrawdownDurationCard({
     <div className="glass-card animate-fade-in-up overflow-hidden">
       <div className="px-6 py-4 border-b border-[var(--border)]/50">
         <span className="text-[10px] text-[var(--accent-blue)] uppercase font-bold tracking-wider">
-          Drawdown Duration Analysis
+          {t('drawdownDurationPanel').label}
         </span>
       </div>
       <div className="p-6 grid grid-cols-3 gap-6">
         <div className="group rounded-lg p-3 -m-3 transition-colors duration-150 hover:bg-white/[0.02]">
           <div className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider mb-1 font-semibold">
-            Median Max Duration
+            {t('medianMaxDuration').label}
           </div>
           <div className="text-2xl metric-value animate-count-up text-[var(--text-primary)]">
             {duration.medianMaxDuration} <span className="text-sm text-[var(--text-secondary)]">trades</span>
@@ -434,7 +439,7 @@ function DrawdownDurationCard({
         </div>
         <div className="group rounded-lg p-3 -m-3 transition-colors duration-150 hover:bg-white/[0.02]">
           <div className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider mb-1 font-semibold">
-            95th Pctl Duration
+            {t('p95Duration').label}
           </div>
           <div className={cn('text-2xl metric-value animate-count-up stagger-2', p95Tone)}>
             {duration.p95MaxDuration} <span className="text-sm text-[var(--text-secondary)]">trades</span>
@@ -442,7 +447,7 @@ function DrawdownDurationCard({
         </div>
         <div className="group rounded-lg p-3 -m-3 transition-colors duration-150 hover:bg-white/[0.02]">
           <div className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider mb-1 font-semibold">
-            Avg % Time Underwater
+            {t('timeUnderwater').label}
           </div>
           <div className={cn('text-2xl metric-value animate-count-up stagger-3', undTone)}>
             {(duration.avgPctUnderwater * 100).toFixed(1)}%

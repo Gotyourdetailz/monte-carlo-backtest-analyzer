@@ -1,6 +1,7 @@
 import { AlertTriangle } from 'lucide-react';
 import { InstitutionalRiskMetrics } from '../riskMetrics';
 import { MetricsValidity, SimulationRunMeta } from '../types';
+import { useTerm } from '../lang/LanguageProvider';
 import { cn } from '../lib/utils';
 
 type Props = {
@@ -11,6 +12,7 @@ type Props = {
 
 export function InstitutionalMetricsPanel({ metrics, runMeta, metricsValidity }: Props) {
   const showTerminal = metricsValidity.terminalPnL;
+  const t = useTerm();
 
   return (
     <div className="glass-card animate-fade-in-up overflow-hidden">
@@ -18,7 +20,7 @@ export function InstitutionalMetricsPanel({ metrics, runMeta, metricsValidity }:
         <div className="flex items-center gap-2">
           <span className={cn('w-2 h-2 rounded-full', showTerminal ? 'bg-[var(--accent-green)] animate-live-pulse' : 'bg-[var(--accent-amber)] animate-live-pulse')} />
           <span className="text-[10px] text-[var(--accent-blue)] uppercase font-bold tracking-wider">
-            Institutional Risk Summary
+            {t('instSummary').label}
           </span>
         </div>
         <span className="text-[10px] font-mono text-[var(--text-secondary)] opacity-60">
@@ -34,26 +36,26 @@ export function InstitutionalMetricsPanel({ metrics, runMeta, metricsValidity }:
       <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-6">
         {showTerminal ? (
           <>
-            <Metric label="VaR 95% (PnL)" value={`$${metrics.var95.toFixed(0)}`} hint="5th percentile terminal PnL" negative={metrics.var95 < 0} stagger={1} />
-            <Metric label="VaR 99% (PnL)" value={`$${metrics.var99.toFixed(0)}`} hint="1st percentile terminal PnL" negative={metrics.var99 < 0} stagger={2} />
-            <Metric label="CVaR 95%" value={`$${metrics.cvar95.toFixed(0)}`} hint="Expected shortfall, worst 5%" negative={metrics.cvar95 < 0} stagger={3} />
-            <Metric label="CVaR 99%" value={`$${metrics.cvar99.toFixed(0)}`} hint="Expected shortfall, worst 1%" negative={metrics.cvar99 < 0} stagger={4} />
-            <Metric label="Prob. of Loss" value={`${metrics.probabilityOfLoss.toFixed(1)}%`} negative={metrics.probabilityOfLoss > 50} stagger={5} />
-            <Metric label="Median Terminal" value={`$${Math.round(metrics.medianFinalBalance).toLocaleString()}`} negative={metrics.medianFinalBalance < 0} stagger={6} />
+            <Metric label={t('var95').label} value={`$${metrics.var95.toFixed(0)}`} hint={t('var95').hint} negative={metrics.var95 < 0} stagger={1} />
+            <Metric label={t('var99').label} value={`$${metrics.var99.toFixed(0)}`} hint={t('var99').hint} negative={metrics.var99 < 0} stagger={2} />
+            <Metric label={t('cvar95').label} value={`$${metrics.cvar95.toFixed(0)}`} hint={t('cvar95').hint} negative={metrics.cvar95 < 0} stagger={3} />
+            <Metric label={t('cvar99').label} value={`$${metrics.cvar99.toFixed(0)}`} hint={t('cvar99').hint} negative={metrics.cvar99 < 0} stagger={4} />
+            <Metric label={t('probLoss').label} value={`${metrics.probabilityOfLoss.toFixed(1)}%`} hint={t('probLoss').hint} negative={metrics.probabilityOfLoss > 50} stagger={5} />
+            <Metric label={t('medianTerminal').label} value={`$${Math.round(metrics.medianFinalBalance).toLocaleString()}`} hint={t('medianTerminal').hint} negative={metrics.medianFinalBalance < 0} stagger={6} />
           </>
         ) : (
           <>
-            <Metric label="VaR 95% (PnL)" value="N/A" hint="Invalid under permutation sampling" muted stagger={1} />
-            <Metric label="CVaR 95%" value="N/A" hint="Invalid under permutation sampling" muted stagger={2} />
+            <Metric label={t('var95').label} value="N/A" hint="Invalid under permutation sampling" muted stagger={1} />
+            <Metric label={t('cvar95').label} value="N/A" hint="Invalid under permutation sampling" muted stagger={2} />
             <Metric label="Terminal metrics" value="N/A" hint="See drawdown distribution below" muted stagger={3} />
           </>
         )}
-        <Metric label="Median Max DD" value={`${(metrics.medianMaxDrawdown * 100).toFixed(1)}%`} hint="Valid for all sampling modes" stagger={showTerminal ? 7 : 4} />
+        <Metric label={t('medianMaxDd').label} value={`${(metrics.medianMaxDrawdown * 100).toFixed(1)}%`} hint={t('medianMaxDd').hint} stagger={showTerminal ? 7 : 4} />
         {showTerminal && (
           <>
-            <Metric label="Calmar (median)" value={metrics.calmarRatio.toFixed(2)} stagger={8} />
-            <Metric label="Skewness" value={metrics.skewness.toFixed(2)} negative={metrics.skewness < -0.5} stagger={8} />
-            <Metric label="Excess Kurtosis" value={metrics.excessKurtosis.toFixed(2)} stagger={8} />
+            <Metric label={t('calmar').label} value={metrics.calmarRatio.toFixed(2)} hint={t('calmar').hint} stagger={8} />
+            <Metric label={t('skewness').label} value={metrics.skewness.toFixed(2)} hint={t('skewness').hint} negative={metrics.skewness < -0.5} stagger={8} />
+            <Metric label={t('kurtosis').label} value={metrics.excessKurtosis.toFixed(2)} hint={t('kurtosis').hint} stagger={8} />
           </>
         )}
       </div>

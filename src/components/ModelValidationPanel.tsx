@@ -4,6 +4,7 @@ import type {
   ModelValidationReport,
   TestVerdict,
 } from '../modelValidation';
+import { useTerm } from '../lang/LanguageProvider';
 import { cn } from '../lib/utils';
 
 type Props = {
@@ -50,6 +51,7 @@ function VerdictBadge({ v }: { v: TestVerdict }) {
 }
 
 export function ModelValidationPanel({ validation }: Props) {
+  const t = useTerm();
   const { goodnessOfFit, serialDependence, varBacktest, pitCalibration, overallVerdict, headline } =
     validation;
 
@@ -58,7 +60,7 @@ export function ModelValidationPanel({ validation }: Props) {
       <div className="px-6 py-4 border-b border-[var(--border)]/50 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <span className="text-[10px] text-[var(--accent-blue)] uppercase font-bold tracking-wider">
-            Model Validation (SR 11-7 style)
+            {t('modelValidationPanel').label}
           </span>
           <span className={cn(overallVerdict === 'fail' && 'verdict-fail-pulse')}>
             <VerdictBadge v={overallVerdict} />

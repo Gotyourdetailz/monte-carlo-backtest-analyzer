@@ -1,5 +1,6 @@
 import { ConvergenceResult } from '../convergenceDiagnostics';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { useTerm } from '../lang/LanguageProvider';
 import { cn } from '../lib/utils';
 
 /**
@@ -19,6 +20,7 @@ const STATUS_COLORS: Record<string, { text: string; badge: string; label: string
 };
 
 export function ConvergencePanel({ convergence }: Props) {
+  const t = useTerm();
   const { checkpoints, status } = convergence;
   const statusInfo = STATUS_COLORS[status];
 
@@ -56,7 +58,7 @@ export function ConvergencePanel({ convergence }: Props) {
       <div className="px-6 py-4 border-b border-[var(--border)]/50 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="text-[10px] text-[var(--accent-blue)] uppercase font-bold tracking-wider">
-            Convergence Diagnostics
+            {t('convergencePanel').label}
           </span>
           <span className={cn('badge', statusInfo.badge)}>{statusInfo.label}</span>
         </div>

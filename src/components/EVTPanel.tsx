@@ -1,5 +1,6 @@
 import type { EVTReport } from '../evt';
 import { Stat } from './_shared/Stat';
+import { useTerm } from '../lang/LanguageProvider';
 import { cn } from '../lib/utils';
 
 type Props = {
@@ -12,6 +13,7 @@ function $fmt(v: number): string {
 }
 
 export function EVTPanel({ evt }: Props) {
+  const t = useTerm();
   const { hill, gpd, heavyTail, note } = evt;
 
   return (
@@ -19,7 +21,7 @@ export function EVTPanel({ evt }: Props) {
       <div className="px-6 py-4 border-b border-[var(--border)]/50 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <span className="text-[10px] text-[var(--accent-blue)] uppercase font-bold tracking-wider">
-            Extreme Value Theory — Loss Tail
+            {t('evtPanel').label}
           </span>
           <span className={cn('badge', heavyTail ? 'badge-amber' : 'badge-green')}>
             {heavyTail ? 'Heavy tail' : 'Tail behaved'}

@@ -7,6 +7,7 @@ import '@fontsource-variable/jetbrains-mono';
 import '@fontsource-variable/manrope';
 import '@fontsource-variable/bricolage-grotesque';
 import {ThemeProvider, initThemeBeforeRender} from './theme/ThemeProvider';
+import {LanguageProvider} from './lang/LanguageProvider';
 import {initAnalytics} from './config';
 import './index.css';
 
@@ -39,7 +40,9 @@ const router = createBrowserRouter([
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>
-      <RouterProvider router={router} />
+      <LanguageProvider>
+        <RouterProvider router={router} />
+      </LanguageProvider>
     </ThemeProvider>
   </StrictMode>,
 );

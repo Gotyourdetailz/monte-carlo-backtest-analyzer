@@ -7,15 +7,18 @@
 import { Download } from 'lucide-react';
 import { EARLY_ACCESS_URL, isEarlyAccessEnabled, trackEvent } from '../config';
 import { ThemeToggle } from './ThemeToggle';
+import { LangToggle } from './LangToggle';
+import { useTerm } from '../lang/LanguageProvider';
+import type { TermKey } from '../lang/terms';
 
 export type ModelTab = 'basic' | 'regime' | 'parametric' | 'portfolio' | 'garch';
 
-const TAB_LABELS: Array<readonly [ModelTab, string]> = [
-  ['basic', 'Trade Sequence MC'],
-  ['regime', 'Regime-Switching'],
-  ['parametric', 'Parametric (Student-t)'],
-  ['portfolio', 'Multi-Strategy Portfolio'],
-  ['garch', 'GARCH(1,1)'],
+const TAB_TERMS: Array<readonly [ModelTab, TermKey]> = [
+  ['basic', 'tabBasic'],
+  ['regime', 'tabRegime'],
+  ['parametric', 'tabParametric'],
+  ['portfolio', 'tabPortfolio'],
+  ['garch', 'tabGarch'],
 ];
 
 export interface MainHeaderProps {
@@ -35,11 +38,12 @@ export function MainHeader({
   onExportPdf,
   onDownloadCsv,
 }: MainHeaderProps) {
+  const t = useTerm();
   return (
     <header className="px-8 mt-6">
       <div className="flex justify-between items-end border-b border-[var(--border)] w-full pb-0">
         <div className="tab-row pb-3">
-          {TAB_LABELS.map(([key, label]) => (
+          {TAB_TERMS.map(([key, termKey]) => (
             <button
               key={key}
               type="button"
@@ -47,11 +51,12 @@ export function MainHeader({
               data-active={activeTab === key}
               className="tab-btn"
             >
-              {label}
+              {t(termKey).label}
             </button>
           ))}
         </div>
         <div className="flex items-end gap-5 pb-1">
+          <LangToggle />
           <ThemeToggle />
           {isEarlyAccessEnabled && (
             <a
